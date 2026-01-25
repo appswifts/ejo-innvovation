@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ejo Innovation</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    
+    <!-- Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    
+    <!-- Tailwind Config -->
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          container: {
+            center: true,
+            padding: "2rem",
+            screens: {
+              "2xl": "1400px",
+            },
+          },
+          extend: {
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+              // Keeping existing colors for backward compatibility if needed, mapped to CSS vars where appropriate or explicit values
+              "background-light": "#f5f8f6",
+              "background-dim": "#f8fcf9",
+              "background-dark": "#102216", 
+              "text-main": "#0d1c12",
+              "surface-light": "#ffffff",
+              "surface-dark": "#1a2c20",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"],
+              "serif": ["Playfair Display", "serif"]
+            },
+            borderRadius: {
+              lg: "var(--radius)",
+              md: "calc(var(--radius) - 2px)",
+              sm: "calc(var(--radius) - 4px)",
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      :root {
+        /* Defaulting to Dark Mode Variables */
+        --background: 142 36% 10%; /* Dark Green #102216 */
+        --foreground: 144 20% 95%;
+        
+        --card: 142 30% 12%;
+        --card-foreground: 144 20% 95%;
+        
+        --popover: 142 30% 12%;
+        --popover-foreground: 144 20% 95%;
+        
+        --primary: 142 70% 45%; /* Green #22c55e approx */
+        --primary-foreground: 144 100% 98%;
+        
+        --secondary: 142 20% 20%;
+        --secondary-foreground: 144 20% 90%;
+        
+        --muted: 142 20% 20%;
+        --muted-foreground: 144 10% 60%;
+        
+        --accent: 142 20% 25%;
+        --accent-foreground: 144 20% 90%;
+        
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 144 20% 98%;
+        
+        --border: 142 20% 20%;
+        --input: 142 20% 20%;
+        --ring: 142 70% 45%;
+        
+        --radius: 0.5rem;
+      }
+
+      .light {
+        /* Light mode overrides if needed, though we default to dark now */
+        --background: 0 0% 100%;
+        --foreground: 142 36% 10%;
+        --card: 0 0% 100%;
+        --card-foreground: 142 36% 10%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 142 36% 10%;
+        --primary: 142 70% 35%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 142 10% 96%;
+        --secondary-foreground: 142 36% 10%;
+        --muted: 142 10% 96%;
+        --muted-foreground: 142 10% 45%;
+        --accent: 142 10% 96%;
+        --accent-foreground: 142 36% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 142 10% 90%;
+        --input: 142 10% 90%;
+        --ring: 142 70% 35%;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      h1, h2, h3, h4, h5, h6, .font-serif {
+        font-family: 'Playfair Display', serif;
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .icon-filled {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      
+      /* Hide scrollbar for slider */
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "lucide-react": "https://esm.sh/lucide-react@0.300.0",
+    "@paper-design/shaders-react": "https://esm.sh/@paper-design/shaders-react"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
