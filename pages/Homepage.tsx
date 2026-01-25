@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react';
 import { CTASection } from '../components/ui/hero-dithering-card';
 import { FeaturesGrid } from '../components/FeaturesGrid';
 import { ChallengeCard } from '../components/ui/card-9';
+import TrendingCard from '../components/ui/trending-card';
 
 const Homepage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -191,86 +192,44 @@ const Homepage: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Article Card 1 */}
-            <article className="flex flex-col bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-              <div className="h-40 w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuArYZ6s3WQyoMgAetKL93k01S8GEMxaNrd1ULUXcryh7PhAZp4Yh_vCJC36LHWxjgvMW4RmeiPEYeGJE0boMBq8fUINL_-h1WuNVfbf4-d6TKaQNbQL9f_OAJ63juBQOdx7yad8bbpnyj7JYLNPxF_JjYgz1BUGTGVsnYV-DUFs1zNApJzUvrqC40bUFK7KIJOVZ7wXYoEn7fGdPTQJbgQtEYghCZ5oE6ymlKp3-MK4ravPJ4bgYCQXRsH55zf93YME1rB_VcHvgCs')" }}>
-                <div className="absolute top-3 left-3 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-accent-foreground uppercase tracking-wide">Technology</div>
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-medium dark:bg-green-900 dark:text-green-100">Open Access</span>
-                  <span className="text-muted-foreground text-xs">Oct 24, 2023</span>
-                </div>
-                <Link to="/article" className="text-lg font-bold text-card-foreground leading-tight mb-2 hover:text-primary cursor-pointer transition-colors">
-                  Advancements in Neural Network Pruning for Edge Devices
-                </Link>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                  This study proposes a novel algorithm for pruning deep learning models to run efficiently on low-power hardware without significant accuracy loss.
-                </p>
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-secondary-foreground">JD</div>
-                    <span className="text-xs font-medium text-foreground">J. Doe et al.</span>
-                  </div>
-                  <button className="text-muted-foreground hover:text-primary">
-                    <span className="material-symbols-outlined text-lg">bookmark</span>
-                  </button>
-                </div>
-              </div>
-            </article>
+            <div className='flex justify-center'>
+              <TrendingCard
+                title="Advancements in Neural Network Pruning for Edge Devices"
+                description="This study proposes a novel algorithm for pruning deep learning models to run efficiently on low-power hardware without significant accuracy loss."
+                badges={["Technology", "Open Access"]}
+                price="Free"
+                imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuArYZ6s3WQyoMgAetKL93k01S8GEMxaNrd1ULUXcryh7PhAZp4Yh_vCJC36LHWxjgvMW4RmeiPEYeGJE0boMBq8fUINL_-h1WuNVfbf4-d6TKaQNbQL9f_OAJ63juBQOdx7yad8bbpnyj7JYLNPxF_JjYgz1BUGTGVsnYV-DUFs1zNApJzUvrqC40bUFK7KIJOVZ7wXYoEn7fGdPTQJbgQtEYghCZ5oE6ymlKp3-MK4ravPJ4bgYCQXRsH55zf93YME1rB_VcHvgCs"
+                author="J. Doe et al."
+                date="Oct 24, 2023"
+                className="h-full"
+              />
+            </div>
             {/* Article Card 2 */}
-            <article className="flex flex-col bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-              <div className="h-40 w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuClHv3SKcts7ZavACeMeMu0lUmaxkfCW3VEdc100LVURbgevHjjXUu-rg4PWJsfIIUHbxPbeCTJvIMFa36xHUOAfiHlgZiVcXosIttFmBKJrBYYx-G1GclW3pvd5kpTU3Uckp3NvAwQuGCAGxyplloO0YxWnuNwP7Or7PfN4aoFh_Bp4mnglYAptlitJuZ2Mg6QnaEztdKy2HHxy8FgWTW2_DocOwjytOkVn0hzpskfbWv_G7wioTKdwdqNyG2NG__YhzxtD_qXlxY')" }}>
-                <div className="absolute top-3 left-3 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-primary uppercase tracking-wide">Biology</div>
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded font-medium">Peer Reviewed</span>
-                  <span className="text-muted-foreground text-xs">Oct 22, 2023</span>
-                </div>
-                <Link to="/article" className="text-lg font-bold text-card-foreground leading-tight mb-2 hover:text-primary cursor-pointer transition-colors">
-                  CRISPR-Cas9 Gene Editing in Agricultural Crops
-                </Link>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                  A comprehensive review of the latest applications of gene editing technologies to improve crop yield and resistance to pests in varying climates.
-                </p>
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-secondary-foreground">AS</div>
-                    <span className="text-xs font-medium text-foreground">A. Smith</span>
-                  </div>
-                  <button className="text-muted-foreground hover:text-primary">
-                    <span className="material-symbols-outlined text-lg">bookmark</span>
-                  </button>
-                </div>
-              </div>
-            </article>
+            <div className='flex justify-center'>
+              <TrendingCard
+                title="CRISPR-Cas9 Gene Editing in Agricultural Crops"
+                description="A comprehensive review of the latest applications of gene editing technologies to improve crop yield and resistance to pests in varying climates."
+                badges={["Biology", "Peer Reviewed"]}
+                price="$35.00"
+                imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuClHv3SKcts7ZavACeMeMu0lUmaxkfCW3VEdc100LVURbgevHjjXUu-rg4PWJsfIIUHbxPbeCTJvIMFa36xHUOAfiHlgZiVcXosIttFmBKJrBYYx-G1GclW3pvd5kpTU3Uckp3NvAwQuGCAGxyplloO0YxWnuNwP7Or7PfN4aoFh_Bp4mnglYAptlitJuZ2Mg6QnaEztdKy2HHxy8FgWTW2_DocOwjytOkVn0hzpskfbWv_G7wioTKdwdqNyG2NG__YhzxtD_qXlxY"
+                author="A. Smith"
+                date="Oct 22, 2023"
+                className="h-full"
+              />
+            </div>
             {/* Article Card 3 */}
-            <article className="flex flex-col bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-              <div className="h-40 w-full bg-cover bg-center relative" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBcqJWYgq9zAvAJS2S7nKM6YaIY1YWy618SGxlrHv2pfV-JMHLd7MSUS0cvJM6EimjecsT7fluYaTWh9l6KlFfeGi3hqdOoFn-1ohDj9gPbZC2gVhLd-l2AQDsFU7CGYlYVjdMoemZba45e_glRFDOMtqp_iIbU8zIT7QFuQxjhbLxb0cBguVHl306q9HZls_F888-WWBV0Hlw8Ba647KYX5gVMX_WsOm7FudPJGqppAKN0QrZndK90fP7GnSCd4RJ0v_RY3giofi0')" }}>
-                <div className="absolute top-3 left-3 bg-background/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide">Data Science</div>
-              </div>
-              <div className="p-6 flex flex-col flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-medium dark:bg-green-900 dark:text-green-100">Open Access</span>
-                  <span className="text-muted-foreground text-xs">Oct 20, 2023</span>
-                </div>
-                <Link to="/article" className="text-lg font-bold text-card-foreground leading-tight mb-2 hover:text-primary cursor-pointer transition-colors">
-                  Big Data Analytics for Sustainable Urban Planning
-                </Link>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-3">
-                  Leveraging municipal data streams to optimize public transportation routes and energy consumption in metropolitan areas.
-                </p>
-                <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-secondary-foreground">KL</div>
-                    <span className="text-xs font-medium text-foreground">K. Lee et al.</span>
-                  </div>
-                  <button className="text-muted-foreground hover:text-primary">
-                    <span className="material-symbols-outlined text-lg">bookmark</span>
-                  </button>
-                </div>
-              </div>
-            </article>
+            <div className='flex justify-center'>
+              <TrendingCard
+                title="Big Data Analytics for Sustainable Urban Planning"
+                description="Leveraging municipal data streams to optimize public transportation routes and energy consumption in metropolitan areas."
+                badges={["Data Science", "Open Access"]}
+                price="Free"
+                imageUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuBcqJWYgq9zAvAJS2S7nKM6YaIY1YWy618SGxlrHv2pfV-JMHLd7MSUS0cvJM6EimjecsT7fluYaTWh9l6KlFfeGi3hqdOoFn-1ohDj9gPbZC2gVhLd-l2AQDsFU7CGYlYVjdMoemZba45e_glRFDOMtqp_iIbU8zIT7QFuQxjhbLxb0cBguVHl306q9HZls_F888-WWBV0Hlw8Ba647KYX5gVMX_WsOm7FudPJGqppAKN0QrZndK90fP7GnSCd4RJ0v_RY3giofi0"
+                author="K. Lee et al."
+                date="Oct 20, 2023"
+                className="h-full"
+              />
+            </div>
           </div>
         </div>
       </section>
