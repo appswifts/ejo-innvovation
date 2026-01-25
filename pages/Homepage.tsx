@@ -3,31 +3,32 @@ import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { CTASection } from '../components/ui/hero-dithering-card';
 import { FeaturesGrid } from '../components/FeaturesGrid';
+import { ChallengeCard } from '../components/ui/card-9';
 
 const Homepage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -300, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: -350, behavior: 'smooth' });
     }
   };
 
   const scrollRight = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 300, behavior: 'smooth' });
+      scrollContainerRef.current.scrollBy({ left: 350, behavior: 'smooth' });
     }
   };
 
   const categories = [
-    { name: 'Computer Science', icon: 'terminal', count: '120k+', color: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
-    { name: 'Medicine', icon: 'stethoscope', count: '85k+', color: 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' },
-    { name: 'Biology', icon: 'microbiology', count: '64k+', color: 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' },
-    { name: 'Physics', icon: 'science', count: '42k+', color: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400' },
-    { name: 'Engineering', icon: 'engineering', count: '90k+', color: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' },
-    { name: 'Chemistry', icon: 'experiment', count: '35k+', color: 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400' },
-    { name: 'Social Sciences', icon: 'psychology', count: '28k+', color: 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400' },
-    { name: 'Environmental', icon: 'eco', count: '31k+', color: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },
+    { name: 'Computer Science', description: 'Explore 120k+ articles including AI, ML, and Software Engineering.', color: 'bg-blue-600' },
+    { name: 'Medicine', description: 'Access 85k+ clinical studies, trials, and medical research papers.', color: 'bg-red-600' },
+    { name: 'Biology', description: 'Discover 64k+ papers on genetics, ecology, and molecular biology.', color: 'bg-green-600' },
+    { name: 'Physics', description: 'Browse 42k+ findings in quantum mechanics, astrophysics, and more.', color: 'bg-purple-600' },
+    { name: 'Engineering', description: 'View 90k+ innovations in civil, mechanical, and electrical fields.', color: 'bg-orange-600' },
+    { name: 'Chemistry', description: 'Search 35k+ compounds, reactions, and material science studies.', color: 'bg-teal-600' },
+    { name: 'Social Sciences', description: 'Read 28k+ articles on psychology, sociology, and anthropology.', color: 'bg-pink-600' },
+    { name: 'Environmental', description: 'Find 31k+ research pieces on climate change and sustainability.', color: 'bg-emerald-600' },
   ];
 
   return (
@@ -101,12 +102,14 @@ const Homepage: React.FC = () => {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {categories.map((cat, idx) => (
-              <Link key={idx} to="/search" className="snap-start shrink-0 w-64 p-6 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all group">
-                <div className={`size-12 rounded-lg ${cat.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <span className="material-symbols-outlined text-2xl">{cat.icon}</span>
-                </div>
-                <h3 className="text-lg font-bold text-card-foreground mb-1 group-hover:text-primary transition-colors">{cat.name}</h3>
-                <p className="text-sm text-muted-foreground">{cat.count} Articles</p>
+              <Link key={idx} to="/search" className="snap-start shrink-0">
+                <ChallengeCard
+                  title={cat.name}
+                  description={cat.description}
+                  buttonText="Browse"
+                  backgroundColor={cat.color}
+                  className="h-full w-[320px]"
+                />
               </Link>
             ))}
           </div>
