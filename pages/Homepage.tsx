@@ -5,6 +5,7 @@ import { CTASection } from '../components/ui/hero-dithering-card';
 import { FeaturesGrid } from '../components/FeaturesGrid';
 import { ChallengeCard } from '../components/ui/card-9';
 import TrendingCard from '../components/ui/trending-card';
+import { Header } from '../components/Header';
 
 const Homepage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -35,41 +36,16 @@ const Homepage: React.FC = () => {
   return (
     <div className="bg-background text-foreground antialiased selection:bg-primary/20">
       {/* Sticky Header */}
-      <header className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur border-b border-border">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="relative">
-                <div className="size-9 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
-                  <Sparkles className="size-5 text-primary-foreground" strokeWidth={2.5} />
-                </div>
-              </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">Ejo Innovation</span>
-            </Link>
-            {/* Desktop Nav & Search */}
-            <div className="hidden md:flex items-center gap-8 flex-1 justify-center px-8">
-              <div className="w-full max-w-md">
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="material-symbols-outlined text-muted-foreground group-focus-within:text-primary transition-colors">search</span>
-                  </div>
-                  <input className="block w-full pl-10 pr-3 py-2 border border-input rounded-lg leading-5 bg-secondary text-sm placeholder-muted-foreground focus:outline-none focus:placeholder-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary sm:text-sm transition-all duration-200" placeholder="Search articles, authors, or DOIs..." type="text" />
-                </div>
-              </div>
-            </div>
-            {/* Auth Buttons */}
-            <div className="flex items-center gap-3">
-              <Link to="/dashboard" className="text-sm font-semibold text-foreground hover:text-primary transition-colors px-3 py-2">
-                Log In
-              </Link>
-              <Link to="/dashboard" className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold py-2 px-4 rounded-lg shadow-sm transition-transform active:scale-95">
-                Get Started
-              </Link>
-            </div>
-          </div>
+      <Header showSearch={true}>
+        <div className="flex items-center gap-3">
+          <Link to="/dashboard" className="text-sm font-semibold text-foreground hover:text-primary transition-colors px-3 py-2">
+            Log In
+          </Link>
+          <Link to="/dashboard" className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold py-2 px-4 rounded-lg shadow-sm transition-transform active:scale-95">
+            Get Started
+          </Link>
         </div>
-      </header>
+      </Header>
 
       {/* New Hero Section */}
       <CTASection />
