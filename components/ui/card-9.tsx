@@ -33,12 +33,12 @@ const cardVariants = {
     boxShadow: "0px 15px 30px -5px hsl(var(--card) / 0.2)",
     transition: { type: "spring", stiffness: 300, damping: 20 },
   },
-};
+} as const;
 
 const arrowVariants = {
   initial: { x: 0 },
   hover: { x: 4, transition: { type: "spring", stiffness: 400, damping: 15 } },
-};
+} as const;
 
 // 5. CREATE THE COMPONENT
 const ChallengeCard = React.forwardRef<HTMLDivElement, ChallengeCardProps>(
