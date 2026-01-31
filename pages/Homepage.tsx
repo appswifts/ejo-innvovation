@@ -7,9 +7,25 @@ import { ChallengeCard } from '../components/ui/card-9';
 import TrendingCard from '../components/ui/trending-card';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
+import { useJournals } from '../src/hooks';
+
+// Color palette for journal cards
+const CARD_COLORS = [
+  'bg-blue-600',
+  'bg-red-600',
+  'bg-green-600',
+  'bg-purple-600',
+  'bg-orange-600',
+  'bg-teal-600',
+  'bg-pink-600',
+  'bg-emerald-600',
+  'bg-indigo-600',
+  'bg-rose-600',
+];
 
 const Homepage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { venues: journals, loading: journalsLoading } = useJournals();
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -23,26 +39,15 @@ const Homepage: React.FC = () => {
     }
   };
 
-  const categories = [
-    { name: 'Computer Science', description: 'Explore 120k+ articles including AI, ML, and Software Engineering.', color: 'bg-blue-600' },
-    { name: 'Medicine', description: 'Access 85k+ clinical studies, trials, and medical research papers.', color: 'bg-red-600' },
-    { name: 'Biology', description: 'Discover 64k+ papers on genetics, ecology, and molecular biology.', color: 'bg-green-600' },
-    { name: 'Physics', description: 'Browse 42k+ findings in quantum mechanics, astrophysics, and more.', color: 'bg-purple-600' },
-    { name: 'Engineering', description: 'View 90k+ innovations in civil, mechanical, and electrical fields.', color: 'bg-orange-600' },
-    { name: 'Chemistry', description: 'Search 35k+ compounds, reactions, and material science studies.', color: 'bg-teal-600' },
-    { name: 'Social Sciences', description: 'Read 28k+ articles on psychology, sociology, and anthropology.', color: 'bg-pink-600' },
-    { name: 'Environmental', description: 'Find 31k+ research pieces on climate change and sustainability.', color: 'bg-emerald-600' },
-  ];
-
   return (
     <div className="bg-background text-foreground antialiased selection:bg-primary/20">
       {/* Sticky Header */}
       <Header showSearch={true}>
         <div className="flex items-center gap-3">
-          <Link to="/dashboard" className="text-sm font-semibold text-foreground hover:text-primary transition-colors px-3 py-2">
+          <Link to="/signin" className="text-sm font-semibold text-foreground hover:text-primary transition-colors px-3 py-2">
             Log In
           </Link>
-          <Link to="/dashboard" className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold py-2 px-4 rounded-lg shadow-sm transition-transform active:scale-95">
+          <Link to="/signup" className="bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-bold py-2 px-4 rounded-lg shadow-sm transition-transform active:scale-95">
             Get Started
           </Link>
         </div>
@@ -51,11 +56,11 @@ const Homepage: React.FC = () => {
       {/* New Hero Section */}
       <CTASection />
 
-      {/* Category Slider Section */}
+      {/* Category Slider Section - Now Dynamic Journals */}
       <section className="py-16 bg-background border-b border-border">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-foreground">Explore by Category</h2>
+            <h2 className="text-2xl font-bold text-foreground">Explore Journals</h2>
             <div className="flex gap-2">
               <button
                 onClick={scrollLeft}
@@ -79,20 +84,33 @@ const Homepage: React.FC = () => {
             className="flex gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {categories.map((cat, idx) => (
-              <Link key={idx} to="/search" className="snap-start shrink-0">
-                <ChallengeCard
-                  title={cat.name}
-                  description={cat.description}
-                  buttonText="Browse"
-                  backgroundColor={cat.color}
-                  className="h-full w-[320px]"
-                />
-              </Link>
-            ))}
+            {journalsLoading ? (
+              // Loading skeleton
+              [...Array(4)].map((_, idx) => (
+                <div key={idx} className="snap-start shrink-0 w-[320px] h-[200px] bg-muted rounded-xl animate-pulse" />
+              ))
+            ) : journals.length > 0 ? (
+              journals.map((journal, idx) => (
+                <Link key={journal.id} to={`/journals/${journal.slug}`} className="snap-start shrink-0">
+                  <ChallengeCard
+                    title={journal.name}
+                    description={journal.description || `Explore research published in ${journal.name}`}
+                    buttonText="Browse"
+                    backgroundColor={CARD_COLORS[idx % CARD_COLORS.length]}
+                    className="h-full w-[320px]"
+                  />
+                </Link>
+              ))
+            ) : (
+              // Empty state
+              <div className="flex items-center justify-center w-full py-12 text-muted-foreground">
+                <p>No journals available yet. Check back soon!</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
+
 
       {/* Stats Section */}
       <section className="border-y border-border bg-card">
