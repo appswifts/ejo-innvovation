@@ -33,5 +33,7 @@ export { useSubmissionAuthors } from './useSubmissionAuthors';
 // Admin
 export { useAdminStats } from './useAdminStats';
 export { useAdminSubmissions } from './useAdminSubmissions';
+export { useAdminUsers } from './useAdminUsers';
+
 
 
