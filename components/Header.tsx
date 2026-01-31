@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 
 interface HeaderProps {
@@ -29,6 +29,14 @@ export const Header: React.FC<HeaderProps> = ({
   searchPlaceholder = 'Search articles, authors, or DOIs...',
   children,
 }) => {
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      navigate(`/search?q=${encodeURIComponent(e.currentTarget.value)}`);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-background/90 backdrop-blur border-b border-border">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -47,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
                     placeholder={searchPlaceholder}
                     type="text"
                     defaultValue={searchValue}
+                    onKeyDown={handleSearch}
                   />
                 </div>
               </div>

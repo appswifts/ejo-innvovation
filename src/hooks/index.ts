@@ -35,5 +35,8 @@ export { useAdminStats } from './useAdminStats';
 export { useAdminSubmissions } from './useAdminSubmissions';
 export { useAdminUsers } from './useAdminUsers';
 
+// General
+export { useGlobalSearch } from './useGlobalSearch';
+
 
 
