@@ -41,7 +41,7 @@ const JournalDetail: React.FC = () => {
         { id: 'about', label: 'About' },
         { id: 'editorial', label: 'Editorial Team' },
         { id: 'submissions', label: 'For Authors' },
-        { id: 'archive', label: 'Archive' },
+        { id: 'archive', label: 'Journal Publications' },
     ];
 
     return (
@@ -124,8 +124,8 @@ const JournalDetail: React.FC = () => {
                                 key={section.id}
                                 onClick={() => setActiveTab(section.id)}
                                 className={`pb-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === section.id
-                                        ? 'border-primary text-primary'
-                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                    ? 'border-primary text-primary'
+                                    : 'border-transparent text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 {section.label}
