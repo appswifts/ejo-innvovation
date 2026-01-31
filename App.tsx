@@ -23,6 +23,7 @@ import ForgotPassword from './src/pages/ForgotPassword';
 import ResetPassword from './src/pages/ResetPassword';
 import Journals from './src/pages/Journals';
 import JournalDetail from './src/pages/JournalDetail';
+import { ProtectedRoute, PublicRoute } from './src/components';
 
 const DevNavigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,32 +68,36 @@ export default function App() {
       <ScrollToTop />
       <div className="min-h-screen bg-background text-foreground font-display">
         <Routes>
+          {/* Public Pages - Accessible to everyone */}
           <Route path="/" element={<Homepage />} />
           <Route path="/search" element={<GlobalSearch />} />
           <Route path="/article" element={<ArticleView />} />
-          <Route path="/dashboard" element={<ResearcherDashboard />} />
-          <Route path="/analytics" element={<LibrarianAnalytics />} />
-          <Route path="/submit" element={<SubmissionWizard />} />
-          <Route path="/submissions" element={<Submissions />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/journals" element={<AdminJournals />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/submissions" element={<AdminSubmissions />} />
-          <Route path="/admin/finance" element={<AdminFinance />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-          <Route path="/admin/logs" element={<AdminLogs />} />
-
+          <Route path="/journals" element={<Journals />} />
+          <Route path="/journals/:slug" element={<JournalDetail />} />
           <Route path="/books" element={<Books />} />
           <Route path="/books/:id" element={<BookDetail />} />
 
-          {/* Auth Routes */}
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* Auth Pages - Only accessible when NOT logged in */}
+          <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/journals" element={<Journals />} />
-          <Route path="/journals/:slug" element={<JournalDetail />} />
+
+          {/* Protected Pages - Require authentication */}
+          <Route path="/dashboard" element={<ProtectedRoute><ResearcherDashboard /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><LibrarianAnalytics /></ProtectedRoute>} />
+          <Route path="/submit" element={<ProtectedRoute><SubmissionWizard /></ProtectedRoute>} />
+          <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+          {/* Admin Pages - Require authentication (role check can be added later) */}
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/journals" element={<ProtectedRoute><AdminJournals /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+          <Route path="/admin/submissions" element={<ProtectedRoute><AdminSubmissions /></ProtectedRoute>} />
+          <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />
+          <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+          <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
         </Routes>
         <DevNavigation />
       </div>
