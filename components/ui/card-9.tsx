@@ -18,6 +18,8 @@ interface ChallengeCardProps {
   className?: string;
   /** Background color using tailwind classes */
   backgroundColor?: string;
+  /** Optional background image URL */
+  imageUrl?: string;
   /** Click handler */
   onClick?: () => void;
 }
@@ -49,6 +51,7 @@ const ChallengeCard = React.forwardRef<HTMLDivElement, ChallengeCardProps>(
       buttonText,
       className,
       backgroundColor = "bg-green-500", // Default background color
+      imageUrl,
       onClick
     },
     ref
@@ -58,7 +61,7 @@ const ChallengeCard = React.forwardRef<HTMLDivElement, ChallengeCardProps>(
         ref={ref}
         className={cn(
           "group relative flex w-full max-w-sm flex-col justify-between overflow-hidden rounded-2xl p-8 text-white cursor-pointer",
-          backgroundColor,
+          !imageUrl && backgroundColor,
           className
         )}
         variants={cardVariants}
@@ -67,17 +70,28 @@ const ChallengeCard = React.forwardRef<HTMLDivElement, ChallengeCardProps>(
         aria-label={`${title}: ${description}`}
         onClick={onClick}
       >
+        {imageUrl && (
+          <div className="absolute inset-0 z-0">
+            <img
+              src={imageUrl}
+              alt=""
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px]" />
+          </div>
+        )}
+
         {/* Card Content */}
-        <div className="space-y-3">
+        <div className="relative z-10 space-y-3">
           <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
-          <p className="max-w-xs text-base font-medium opacity-80">{description}</p>
+          <p className="max-w-xs text-base font-medium opacity-90">{description}</p>
         </div>
 
         {/* Action Button */}
         <button
-          className="group mt-8 flex w-full items-center justify-between rounded-full bg-white pl-6 pr-2 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="relative z-10 group/btn mt-8 flex w-full items-center justify-between rounded-full bg-white pl-6 pr-2 py-2 text-sm font-semibold text-zinc-900 transition-colors hover:bg-zinc-100"
           aria-label={buttonText}
-          tabIndex={-1} // Handled by parent click for accessibility if wrapped in Link usually, but let's keep it simple
+          tabIndex={-1}
         >
           <span>{buttonText}</span>
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900">

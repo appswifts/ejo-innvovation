@@ -25,7 +25,7 @@ const CARD_COLORS = [
 
 const Homepage: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { venues: journals, loading: journalsLoading } = useJournals();
+  const { venues: journals, loading: journalsLoading, error } = useJournals();
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -89,6 +89,11 @@ const Homepage: React.FC = () => {
               [...Array(4)].map((_, idx) => (
                 <div key={idx} className="snap-start shrink-0 w-[320px] h-[200px] bg-muted rounded-xl animate-pulse" />
               ))
+            ) : error ? (
+              <div className="w-full p-8 text-center bg-destructive/10 text-destructive rounded-xl border border-destructive/20">
+                <p className="font-bold">Error loading journals</p>
+                <p className="text-sm">{error}</p>
+              </div>
             ) : journals.length > 0 ? (
               journals.map((journal, idx) => (
                 <Link key={journal.id} to={`/journals/${journal.slug}`} className="snap-start shrink-0">
@@ -97,14 +102,18 @@ const Homepage: React.FC = () => {
                     description={journal.description || `Explore research published in ${journal.name}`}
                     buttonText="Browse"
                     backgroundColor={CARD_COLORS[idx % CARD_COLORS.length]}
+                    imageUrl={journal.cover_image_url || undefined}
                     className="h-full w-[320px]"
                   />
                 </Link>
               ))
             ) : (
               // Empty state
-              <div className="flex items-center justify-center w-full py-12 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center w-full py-12 text-muted-foreground">
                 <p>No journals available yet. Check back soon!</p>
+                <div className="mt-4 text-xs font-mono bg-secondary p-2 rounded">
+                  Debug: No data found. (Loading: {String(journalsLoading)}, Error: {String(error)})
+                </div>
               </div>
             )}
           </div>

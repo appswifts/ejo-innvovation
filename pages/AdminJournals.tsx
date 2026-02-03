@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../src/layouts/DashboardLayout';
-import { Plus, BookOpen, Globe, Edit, ExternalLink, Archive, RotateCcw, X, Trash2, Image as ImageIcon } from 'lucide-react';
-import { useJournals, useAdminJournals } from '../src/hooks';
+import { Plus, BookOpen, Globe, Edit, ExternalLink, Archive, RotateCcw, X, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
+import { useJournals, useAdminJournals, useImageUpload } from '../src/hooks';
 import { Link } from 'react-router-dom';
 import type { Venue } from '../src/types/database';
 
@@ -9,6 +9,7 @@ const AdminJournals: React.FC = () => {
     // Shared state
     const { venues: journals, loading, refetch } = useJournals();
     const { createJournal, updateJournal, archiveJournal, restoreJournal } = useAdminJournals();
+    const { uploadImage, uploading: imageUploading } = useImageUpload();
 
     // Modal states
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -57,6 +58,16 @@ const AdminJournals: React.FC = () => {
             cover_image_url: journal.cover_image_url || ''
         });
         setIsEditModalOpen(true);
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const url = await uploadImage(file, 'journal-covers');
+        if (url) {
+            setFormData(prev => ({ ...prev, cover_image_url: url }));
+        }
     };
 
     const handleSubmitCreate = async (e: React.FormEvent) => {
@@ -259,16 +270,31 @@ const AdminJournals: React.FC = () => {
                                 <div className="space-y-2 md:col-span-2">
                                     <label className="text-sm font-medium flex items-center gap-1">
                                         <ImageIcon className="size-4 text-muted-foreground" />
-                                        Cover Image URL
+                                        Cover Image
                                     </label>
                                     <div className="flex gap-2">
                                         <input
                                             type="url"
                                             value={formData.cover_image_url}
                                             onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })}
-                                            className="w-full px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            className="flex-1 px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
                                             placeholder="https://example.com/image.jpg"
                                         />
+                                        <label className={`cursor-pointer bg-secondary px-3 py-2 rounded-lg hover:bg-secondary/80 transition-colors flex items-center gap-2 ${imageUploading ? 'opacity-70 pointer-events-none' : ''}`}>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={handleImageUpload}
+                                                disabled={imageUploading}
+                                            />
+                                            {imageUploading ? (
+                                                <div className="size-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            ) : (
+                                                <Upload className="size-4" />
+                                            )}
+                                            <span className="text-sm font-medium">Upload</span>
+                                        </label>
                                     </div>
                                     <p className="text-xs text-muted-foreground">URL to a cover image (landscape preferred).</p>
                                     {formData.cover_image_url && (

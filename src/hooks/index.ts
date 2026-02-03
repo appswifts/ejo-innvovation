@@ -29,6 +29,7 @@ export { useSubmissionFields } from './useSubmissionFields';
 // Files
 export { useFileUpload } from './useFileUpload';
 export { useSubmissionAuthors } from './useSubmissionAuthors';
+export { useImageUpload } from './useImageUpload';
 
 // Admin
 export { useAdminStats } from './useAdminStats';
