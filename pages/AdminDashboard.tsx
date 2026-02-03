@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, BookOpen, FileText, DollarSign, Activity, Settings as SettingsIcon } from 'lucide-react';
+import { Users, BookOpen, FileText, DollarSign, Activity, Settings as SettingsIcon, Book } from 'lucide-react';
 import DashboardLayout from '../src/layouts/DashboardLayout';
 import { Link } from 'react-router-dom';
 import { useAdminStats } from '../src/hooks';
@@ -131,18 +131,18 @@ const AdminDashboard: React.FC = () => {
                         <div className="bg-card border border-border rounded-xl shadow-sm p-6">
                             <h3 className="font-bold text-lg mb-4">Quick Actions</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
+                                <Link to="/admin/journals" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
                                     <BookOpen className="size-6 text-primary" />
-                                    <span className="text-xs font-medium">New Journal</span>
-                                </button>
-                                <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
+                                    <span className="text-xs font-medium">Manage Journals</span>
+                                </Link>
+                                <Link to="/admin/users" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
                                     <Users className="size-6 text-blue-600" />
-                                    <span className="text-xs font-medium">Add User</span>
-                                </button>
-                                <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
-                                    <SettingsIcon className="size-6 text-gray-600" />
-                                    <span className="text-xs font-medium">Config</span>
-                                </button>
+                                    <span className="text-xs font-medium">Manage Users</span>
+                                </Link>
+                                <Link to="/admin/books" className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
+                                    <Book className="size-6 text-indigo-600" />
+                                    <span className="text-xs font-medium">Manage Books</span>
+                                </Link>
                                 <button className="flex flex-col items-center justify-center gap-2 p-4 rounded-lg border border-border hover:bg-accent hover:border-primary/50 transition-all bg-background text-center">
                                     <Activity className="size-6 text-green-600" />
                                     <span className="text-xs font-medium">Logs</span>

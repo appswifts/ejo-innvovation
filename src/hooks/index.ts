@@ -34,9 +34,11 @@ export { useSubmissionAuthors } from './useSubmissionAuthors';
 export { useAdminStats } from './useAdminStats';
 export { useAdminSubmissions } from './useAdminSubmissions';
 export { useAdminUsers } from './useAdminUsers';
+export { useAdminJournals } from './useAdminJournals';
+export { useAdminBooks } from './useAdminBooks';
 
 // General
 export { useGlobalSearch } from './useGlobalSearch';
 
-
-
+// User Roles
+export { useUserRoles } from './useUserRoles';

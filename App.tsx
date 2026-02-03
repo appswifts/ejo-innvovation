@@ -10,6 +10,7 @@ import Submissions from './pages/Submissions';
 import Settings from './pages/Settings';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJournals from './pages/AdminJournals';
+import AdminBooks from './pages/AdminBooks';
 import AdminUsers from './pages/AdminUsers';
 import AdminSubmissions from './pages/AdminSubmissions';
 import AdminFinance from './pages/AdminFinance';
@@ -93,6 +94,7 @@ export default function App() {
           {/* Admin Pages - Require authentication (role check can be added later) */}
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/admin/journals" element={<ProtectedRoute><AdminJournals /></ProtectedRoute>} />
+          <Route path="/admin/books" element={<ProtectedRoute><AdminBooks /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
           <Route path="/admin/submissions" element={<ProtectedRoute><AdminSubmissions /></ProtectedRoute>} />
           <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Profile } from '../types/database';
+import type { Profile, UserRoleType } from '../types/database';
 
 interface UseAdminUsersOptions {
     page?: number;
@@ -28,7 +28,7 @@ export function useAdminUsers({ page = 1, limit = 10, search = '', role = null }
             // which often happens with complex Supabase joins in generic contexts
             let query = supabase
                 .from('profiles')
-                .select('*, user_roles(role)', { count: 'exact' }) as any;
+                .select('*, user_roles!user_id(role)', { count: 'exact' }) as any;
 
             if (search) {
                 query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -74,5 +74,81 @@ export function useAdminUsers({ page = 1, limit = 10, search = '', role = null }
         fetchUsers();
     }, [fetchUsers]);
 
-    return { users, total, loading, error, refetch: fetchUsers };
+    // UPDATE user profile
+    const updateUser = async (userId: string, updates: Partial<Profile>) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', userId);
+
+            if (error) throw error;
+            await fetchUsers();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    // UPDATE user role
+    const updateUserRole = async (userId: string, newRole: UserRoleType) => {
+        try {
+            // First check if user already has a role
+            const { data: existingRoles } = await supabase
+                .from('user_roles')
+                .select('id')
+                .eq('user_id', userId);
+
+            if (existingRoles && existingRoles.length > 0) {
+                // Update existing role
+                const { error } = await supabase
+                    .from('user_roles')
+                    .update({ role: newRole, is_active: true })
+                    .eq('user_id', userId);
+
+                if (error) throw error;
+            } else {
+                // Insert new role
+                const { error } = await supabase
+                    .from('user_roles')
+                    .insert({ user_id: userId, role: newRole, is_active: true });
+
+                if (error) throw error;
+            }
+
+            await fetchUsers();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    // DELETE user (soft delete by deactivating)
+    const deleteUser = async (userId: string) => {
+        try {
+            // Deactivate user roles
+            await supabase
+                .from('user_roles')
+                .update({ is_active: false })
+                .eq('user_id', userId);
+
+            // Note: We don't actually delete the profile as it may have submissions
+            // In a real app, you might want to handle this differently
+            await fetchUsers();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    return {
+        users,
+        total,
+        loading,
+        error,
+        refetch: fetchUsers,
+        updateUser,
+        updateUserRole,
+        deleteUser
+    };
 }

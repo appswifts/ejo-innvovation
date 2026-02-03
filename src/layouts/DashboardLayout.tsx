@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Sparkles, Menu, X, LogOut, Settings, User } from 'lucide-react';
-import { useAuth } from '../hooks';
+import { Sparkles, Menu, X, LogOut, Settings, User, Shield } from 'lucide-react';
+import { useAuth, useUserRoles } from '../hooks';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -11,6 +11,7 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, showSidebar = true, variant = 'researcher' }) => {
     const { user, signOut } = useAuth();
+    const { isAdmin } = useUserRoles(user?.id);
     const location = useLocation();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -45,6 +46,17 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, showSidebar
                     <div className="px-3 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">System</div>
                     <NavLink to="/admin/settings" icon="settings" label="Settings" />
                     <NavLink to="/admin/logs" icon="terminal" label="Logs" />
+
+                    {/* Back to Researcher Dashboard */}
+                    <div className="h-px bg-border my-2 mx-3"></div>
+                    <Link
+                        to="/dashboard"
+                        className="flex items-center gap-3 mx-3 px-3 py-2.5 rounded-lg bg-secondary/50 border border-border text-muted-foreground hover:bg-secondary hover:text-foreground transition-all group"
+                        onClick={() => setMobileMenuOpen(false)}
+                    >
+                        <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">arrow_back</span>
+                        <span className="text-sm font-medium">Back to Dashboard</span>
+                    </Link>
                 </nav>
             );
         }
@@ -61,6 +73,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, showSidebar
                 <div className="h-px bg-border my-2 mx-3"></div>
 
                 <NavLink to="/settings" icon="settings" label="Settings" />
+
+                {/* Admin Access Button */}
+                {isAdmin && (
+                    <>
+                        <div className="h-px bg-border my-2 mx-3"></div>
+                        <Link
+                            to="/admin"
+                            className="flex items-center gap-3 mx-3 px-3 py-2.5 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 text-primary hover:from-primary/20 hover:to-primary/10 hover:border-primary/30 transition-all group"
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <Shield className="size-5 group-hover:scale-110 transition-transform" strokeWidth={2} />
+                            <span className="text-sm font-semibold">Admin Console</span>
+                        </Link>
+                    </>
+                )}
             </nav>
         );
     };

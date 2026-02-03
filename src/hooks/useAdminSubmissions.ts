@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Submission } from '../types/database';
+import type { Submission, SubmissionStatus } from '../types/database';
 
 interface UseAdminSubmissionsOptions {
     page?: number;
@@ -62,5 +62,45 @@ export function useAdminSubmissions({ page = 1, limit = 10, search = '', status 
         fetchSubmissions();
     }, [fetchSubmissions]);
 
-    return { submissions, total, loading, error, refetch: fetchSubmissions };
+    // UPDATE submission status
+    const updateSubmissionStatus = async (submissionId: string, newStatus: SubmissionStatus) => {
+        try {
+            const { error } = await supabase
+                .from('submissions')
+                .update({ status: newStatus })
+                .eq('id', submissionId);
+
+            if (error) throw error;
+            await fetchSubmissions();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    // DELETE submission
+    const deleteSubmission = async (submissionId: string) => {
+        try {
+            const { error } = await supabase
+                .from('submissions')
+                .delete()
+                .eq('id', submissionId);
+
+            if (error) throw error;
+            await fetchSubmissions();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    return {
+        submissions,
+        total,
+        loading,
+        error,
+        refetch: fetchSubmissions,
+        updateSubmissionStatus,
+        deleteSubmission
+    };
 }

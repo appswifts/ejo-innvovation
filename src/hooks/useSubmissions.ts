@@ -70,7 +70,7 @@ export function useSubmissions(options: UseSubmissionsOptions = {}) {
             return;
         }
 
-        setSubmissions(data || []);
+        setSubmissions((data as any) || []);
         setLoading(false);
     }, [user, options.status, options.venueId, options.limit]);
 
@@ -112,7 +112,7 @@ export function useSubmission(id: string) {
                 return;
             }
 
-            setSubmission(data);
+            setSubmission(data as any);
             setLoading(false);
         }
 
