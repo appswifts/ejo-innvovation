@@ -7,9 +7,10 @@ interface UseAdminSubmissionsOptions {
     limit?: number;
     search?: string;
     status?: string | null;
+    submissionTypeId?: string | null;
 }
 
-export function useAdminSubmissions({ page = 1, limit = 10, search = '', status = null }: UseAdminSubmissionsOptions = {}) {
+export function useAdminSubmissions({ page = 1, limit = 10, search = '', status = null, submissionTypeId = null }: UseAdminSubmissionsOptions = {}) {
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -37,6 +38,10 @@ export function useAdminSubmissions({ page = 1, limit = 10, search = '', status 
                 query = query.or(`title.ilike.%${search}%,abstract.ilike.%${search}%`);
             }
 
+            if (submissionTypeId) {
+                query = query.eq('submission_type_id', submissionTypeId);
+            }
+
             const from = (page - 1) * limit;
             const to = from + limit - 1;
 
@@ -56,7 +61,7 @@ export function useAdminSubmissions({ page = 1, limit = 10, search = '', status 
         } finally {
             setLoading(false);
         }
-    }, [page, limit, search, status]);
+    }, [page, limit, search, status, submissionTypeId]);
 
     useEffect(() => {
         fetchSubmissions();
@@ -68,6 +73,22 @@ export function useAdminSubmissions({ page = 1, limit = 10, search = '', status 
             const { error } = await supabase
                 .from('submissions')
                 .update({ status: newStatus })
+                .eq('id', submissionId);
+
+            if (error) throw error;
+            await fetchSubmissions();
+            return { success: true };
+        } catch (err: any) {
+            return { error: err.message };
+        }
+    };
+
+    // UPDATE submission details (generic)
+    const updateSubmission = async (submissionId: string, updates: any) => {
+        try {
+            const { error } = await supabase
+                .from('submissions')
+                .update(updates)
                 .eq('id', submissionId);
 
             if (error) throw error;

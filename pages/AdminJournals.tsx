@@ -78,6 +78,8 @@ const AdminJournals: React.FC = () => {
             await refetch();
             setIsCreateModalOpen(false);
             resetForm();
+        } else {
+            alert('Failed to create journal: ' + (result.error || 'Unknown error'));
         }
         setIsActionLoading(false);
     };
@@ -91,6 +93,8 @@ const AdminJournals: React.FC = () => {
             await refetch();
             setIsEditModalOpen(false);
             resetForm();
+        } else {
+            alert('Failed to update journal: ' + (result.error || 'Unknown error'));
         }
         setIsActionLoading(false);
     };

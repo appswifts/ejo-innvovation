@@ -192,6 +192,45 @@ export type Database = {
                 }
                 Relationships: []
             }
+            purchases: {
+                Row: {
+                    amount: number
+                    created_at: string | null
+                    currency: string
+                    id: string
+                    provider: string
+                    status: string
+                    submission_id: string
+                    transaction_id: string | null
+                    updated_at: string | null
+                    user_id: string
+                }
+                Insert: {
+                    amount: number
+                    created_at?: string | null
+                    currency: string
+                    id?: string
+                    provider: string
+                    status: string
+                    submission_id: string
+                    transaction_id?: string | null
+                    updated_at?: string | null
+                    user_id: string
+                }
+                Update: {
+                    amount?: number
+                    created_at?: string | null
+                    currency?: string
+                    id?: string
+                    provider?: string
+                    status?: string
+                    submission_id?: string
+                    transaction_id?: string | null
+                    updated_at?: string | null
+                    user_id?: string
+                }
+                Relationships: []
+            }
             reviews: {
                 Row: {
                     accepted_at: string | null
@@ -586,6 +625,8 @@ export type Database = {
                     keywords: string[] | null
                     metadata: Json | null
                     pages: string | null
+                    preview_content: string | null
+                    price: number | null
                     publication_date: string | null
                     published_at: string | null
                     revision_number: number | null
@@ -597,6 +638,7 @@ export type Database = {
                     updated_at: string | null
                     venue_id: string
                     volume: string | null
+                    currency: string
                 }
                 Insert: {
                     abstract?: string | null
@@ -610,6 +652,8 @@ export type Database = {
                     keywords?: string[] | null
                     metadata?: Json | null
                     pages?: string | null
+                    preview_content?: string | null
+                    price?: number | null
                     publication_date?: string | null
                     published_at?: string | null
                     revision_number?: number | null
@@ -621,6 +665,7 @@ export type Database = {
                     updated_at?: string | null
                     venue_id: string
                     volume?: string | null
+                    currency?: string
                 }
                 Update: {
                     abstract?: string | null
@@ -634,6 +679,8 @@ export type Database = {
                     keywords?: string[] | null
                     metadata?: Json | null
                     pages?: string | null
+                    preview_content?: string | null
+                    price?: number | null
                     publication_date?: string | null
                     published_at?: string | null
                     revision_number?: number | null
@@ -645,6 +692,7 @@ export type Database = {
                     updated_at?: string | null
                     venue_id?: string
                     volume?: string | null
+                    currency?: string
                 }
                 Relationships: []
             }

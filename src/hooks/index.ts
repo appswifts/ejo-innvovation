@@ -40,6 +40,7 @@ export { useAdminBooks } from './useAdminBooks';
 
 // General
 export { useGlobalSearch } from './useGlobalSearch';
+export { usePayment } from './usePayment';
 
 // User Roles
 export { useUserRoles } from './useUserRoles';

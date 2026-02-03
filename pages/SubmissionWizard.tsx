@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../src/lib/supabase';
 // Re-triggering HMR
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -14,7 +15,9 @@ import {
   useUpdateSubmission,
   useSubmissionFields,
   useFileUpload,
-  useSubmissionAuthors
+  useSubmissionAuthors,
+  useTaxonomiesForSubmissionType,
+  useSubmission
 } from '../src/hooks';
 import DashboardLayout from '../src/layouts/DashboardLayout';
 
@@ -69,11 +72,69 @@ const SubmissionWizard: React.FC = () => {
     fetchAuthors
   } = useSubmissionAuthors(submissionId);
 
+  const { taxonomies: typeTaxonomies, loading: taxonomiesLoading } = useTaxonomiesForSubmissionType(selectedTypeId);
+  const [taxonomyValues, setTaxonomyValues] = useState<Record<string, string[]>>({});
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/signin?redirect=/submit');
     }
   }, [user, authLoading, navigate]);
+
+  // Load existing data if submissionId exists
+  useEffect(() => {
+    async function loadSubmissionData() {
+      if (!submissionId) return;
+
+      // 1. Fetch field values
+      const { data: values } = await supabase
+        .from('submission_field_values')
+        .select(`
+          field:submission_fields(key, field_type),
+          value_text,
+          value_number,
+          value_boolean,
+          value_date,
+          value_json
+        `)
+        .eq('submission_id', submissionId);
+
+      if (values) {
+        const newFormData: Record<string, any> = {};
+        values.forEach((v: any) => {
+          const key = v.field.key;
+          // Determine which value column to use based on field type
+          // or just check which one is not null (though boolean could be false)
+          // Better to use field definition, but here we can try to guess or use specific logic
+          // actually we have v.field.key
+          if (v.value_text !== null) newFormData[key] = v.value_text;
+          else if (v.value_number !== null) newFormData[key] = v.value_number;
+          else if (v.value_boolean !== null) newFormData[key] = v.value_boolean;
+          else if (v.value_date !== null) newFormData[key] = v.value_date;
+          else if (v.value_json !== null) newFormData[key] = v.value_json;
+        });
+        setFormData(prev => ({ ...prev, ...newFormData }));
+      }
+
+      // 2. Fetch selected terms
+      const { data: terms } = await supabase
+        .from('submission_terms')
+        .select('term:terms(id, taxonomy_id)')
+        .eq('submission_id', submissionId);
+
+      if (terms) {
+        const newTaxonomyValues: Record<string, string[]> = {};
+        terms.forEach((t: any) => {
+          const taxId = t.term.taxonomy_id;
+          if (!newTaxonomyValues[taxId]) newTaxonomyValues[taxId] = [];
+          newTaxonomyValues[taxId].push(t.term.id);
+        });
+        setTaxonomyValues(newTaxonomyValues);
+      }
+    }
+
+    loadSubmissionData();
+  }, [submissionId]);
 
   const handleNext = async () => {
     if (currentStep === 0) {
@@ -115,11 +176,59 @@ const SubmissionWizard: React.FC = () => {
     } else if (currentStep === 2) {
       // Save metadata
       if (submissionId) {
+        // 1. Update main submission details
         await updateSubmission(submissionId, {
           title,
           abstract,
           metadata: { ...formData, submission_step: 'CONTRIBUTORS' }
         });
+
+        // 2. Save Field Values
+        const fieldUpdates = Object.entries(formData).map(([key, value]) => {
+          const field = fields.find(f => f.key === key);
+          if (!field) return null;
+
+          const update: any = {
+            submission_id: submissionId,
+            field_id: field.field_id
+          };
+
+          // Determine column based on type
+          switch (field.field_type) {
+            case 'NUMBER': update.value_number = value; break;
+            case 'BOOLEAN': update.value_boolean = value; break;
+            case 'DATE': update.value_date = value; break;
+            case 'MULTISELECT':
+            case 'FILE':
+              update.value_json = value; break;
+            default: update.value_text = value; // TEXT, TEXTAREA, SELECT, URL, EMAIL, ORCID
+          }
+          return update;
+        }).filter(Boolean);
+
+        if (fieldUpdates.length > 0) {
+          // Upsert field values
+          for (const update of fieldUpdates) {
+            const { error } = await supabase
+              .from('submission_field_values')
+              .upsert(update, { onConflict: 'submission_id,field_id' });
+            if (error) console.error('Error saving field:', error);
+          }
+        }
+
+        // 3. Save Taxonomies
+        // First delete existing terms for this submission? Or just upsert?
+        // Deleting and re-inserting is safer for full sync
+        await supabase.from('submission_terms').delete().eq('submission_id', submissionId);
+
+        const termInserts = Object.values(taxonomyValues).flat().map(termId => ({
+          submission_id: submissionId,
+          term_id: termId
+        }));
+
+        if (termInserts.length > 0) {
+          await supabase.from('submission_terms').insert(termInserts);
+        }
       }
       setCurrentStep(prev => prev + 1);
     } else if (currentStep === 3) {
@@ -386,30 +495,101 @@ const SubmissionWizard: React.FC = () => {
 
                   {Object.entries(fieldsBySection).map(([section, sectionFields]) => (
                     <div key={section} className="space-y-4">
-                      <h3 className="font-semibold text-lg border-b border-border pb-2">{section}</h3>
+                      <h3 className="font-semibold text-lg border-b border-border pb-2">{section === 'null' ? 'General' : section}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {sectionFields.map(field => (
-                          <div key={field.key} className={field.field_type === 'TEXTAREA' ? 'md:col-span-2' : ''}>
+                          <div key={field.key} className={field.field_type === 'TEXTAREA' || field.field_type === 'FILE' ? 'md:col-span-2' : ''}>
                             <label className="block text-sm font-medium mb-1">
                               {field.label} {field.is_required && <span className="text-destructive">*</span>}
                             </label>
+
+                            {/* Render Input based on Type */}
                             {field.field_type === 'TEXTAREA' ? (
                               <textarea
                                 className="w-full p-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/50 outline-none"
                                 rows={3}
+                                value={formData[field.key] || ''}
+                                required={field.is_required}
                                 onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
                               />
                             ) : field.field_type === 'SELECT' ? (
-                              <select className="w-full p-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/50 outline-none">
+                              <select
+                                className="w-full p-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/50 outline-none"
+                                value={formData[field.key] || ''}
+                                required={field.is_required}
+                                onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                              >
                                 <option value="">Select option...</option>
                                 {(field.options?.choices || []).map((opt: any) => (
                                   <option key={opt} value={opt}>{opt}</option>
                                 ))}
                               </select>
+                            ) : field.field_type === 'BOOLEAN' ? (
+                              <div className="flex items-center gap-2 mt-2">
+                                <input
+                                  type="checkbox"
+                                  id={field.key}
+                                  className="size-5 rounded border-border text-primary focus:ring-primary"
+                                  checked={formData[field.key] === true}
+                                  onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.checked }))}
+                                />
+                                <label htmlFor={field.key} className="text-sm cursor-pointer select-none">Yes, {field.label.toLowerCase()}</label>
+                              </div>
+                            ) : field.field_type === 'FILE' ? (
+                              <div className="flex items-center gap-4">
+                                {formData[field.key] ? (
+                                  <div className="flex items-center gap-2 bg-secondary px-3 py-2 rounded-lg border border-border text-sm">
+                                    <FileIcon className="size-4" />
+                                    <span className="truncate max-w-[200px]">
+                                      {typeof formData[field.key] === 'object' ? formData[field.key].name : 'File Uploaded'}
+                                    </span>
+                                    <button
+                                      onClick={() => setFormData(prev => ({ ...prev, [field.key]: null }))}
+                                      className="text-destructive hover:bg-destructive/10 p-1 rounded"
+                                    >
+                                      <X className="size-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="relative">
+                                    <input
+                                      type="file"
+                                      className="block w-full text-sm text-slate-500
+                                              file:mr-4 file:py-2 file:px-4
+                                              file:rounded-full file:border-0
+                                              file:text-sm file:font-semibold
+                                              file:bg-primary/10 file:text-primary
+                                              hover:file:bg-primary/20
+                                            "
+                                      onChange={async (e) => {
+                                        if (e.target.files?.[0] && submissionId) {
+                                          const f = e.target.files[0];
+                                          // Upload immediately
+                                          const res = await uploadFile(f, submissionId, 'OTHER', field.label); // Use appropriate file type if possible
+                                          if (res.data) {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              [field.key]: {
+                                                id: res.data.id,
+                                                path: res.data.file_path,
+                                                name: f.name
+                                              }
+                                            }));
+                                          } else {
+                                            alert('Upload failed');
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <input
-                                type={field.field_type === 'NUMBER' ? 'number' : 'text'}
+                                type={field.field_type === 'NUMBER' ? 'number' : field.field_type === 'DATE' ? 'date' : 'text'}
                                 className="w-full p-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/50 outline-none"
+                                value={formData[field.key] || ''}
+                                required={field.is_required}
                                 onChange={(e) => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
                               />
                             )}
@@ -421,6 +601,64 @@ const SubmissionWizard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+
+                  {/* Taxonomies Section */}
+                  {typeTaxonomies.length > 0 && (
+                    <div className="space-y-4 pt-4 border-t border-border">
+                      <h3 className="font-semibold text-lg">Categorization</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {typeTaxonomies.map(({ taxonomy, terms, isRequired, maxTerms }) => (
+                          <div key={taxonomy.id} className="space-y-2">
+                            <label className="block text-sm font-medium">
+                              {taxonomy.label} {isRequired && <span className="text-destructive">*</span>}
+                            </label>
+
+                            {taxonomy.is_multiple ? (
+                              <div className="border border-border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 bg-background">
+                                {terms.map(term => (
+                                  <label key={term.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                                    <input
+                                      type="checkbox"
+                                      className="rounded border-border text-primary focus:ring-primary"
+                                      checked={(taxonomyValues[taxonomy.id] || []).includes(term.id)}
+                                      onChange={(e) => {
+                                        const current = taxonomyValues[taxonomy.id] || [];
+                                        let next;
+                                        if (e.target.checked) {
+                                          if (maxTerms && current.length >= maxTerms) return; // Limit check
+                                          next = [...current, term.id];
+                                        } else {
+                                          next = current.filter(id => id !== term.id);
+                                        }
+                                        setTaxonomyValues(prev => ({ ...prev, [taxonomy.id]: next }));
+                                      }}
+                                    />
+                                    <span className="text-sm">{term.name}</span>
+                                  </label>
+                                ))}
+                                {terms.length === 0 && <p className="text-xs text-muted-foreground">No terms available.</p>}
+                              </div>
+                            ) : (
+                              <select
+                                className="w-full p-3 rounded-lg bg-background border border-border focus:ring-2 focus:ring-primary/50 outline-none"
+                                value={(taxonomyValues[taxonomy.id] || [])[0] || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setTaxonomyValues(prev => ({ ...prev, [taxonomy.id]: val ? [val] : [] }));
+                                }}
+                              >
+                                <option value="">Select {taxonomy.label}...</option>
+                                {terms.map(term => (
+                                  <option key={term.id} value={term.id}>{term.name}</option>
+                                ))}
+                              </select>
+                            )}
+                            {taxonomy.description && <p className="text-xs text-muted-foreground">{taxonomy.description}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

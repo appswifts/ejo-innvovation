@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../src/layouts/DashboardLayout';
 import { Search, Filter, Eye, MoreHorizontal, Download, Trash2, CheckCircle, XCircle, AlertTriangle, X } from 'lucide-react';
-import { useAdminSubmissions } from '../src/hooks';
+import { useAdminSubmissions, useSubmissionTypes } from '../src/hooks';
 import { Link } from 'react-router-dom';
 import type { SubmissionStatus } from '../src/types/database';
 
@@ -16,12 +16,16 @@ const AdminSubmissions: React.FC = () => {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [typeFilter, setTypeFilter] = useState<string | null>(null);
+
+    const { types, loading: typesLoading } = useSubmissionTypes();
 
     const { submissions, total, loading, error, updateSubmissionStatus, deleteSubmission } = useAdminSubmissions({
         page,
         limit: 10,
         search: debouncedSearch,
-        status: statusFilter
+        status: statusFilter,
+        submissionTypeId: typeFilter
     });
 
     const totalPages = Math.ceil(total / 10);
@@ -135,6 +139,23 @@ const AdminSubmissions: React.FC = () => {
                             </button>
                         ))}
                     </div>
+
+                    {/* Type Filter */}
+                    <div className="w-full md:w-48">
+                        <select
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            value={typeFilter || ''}
+                            onChange={(e) => {
+                                setTypeFilter(e.target.value || null);
+                                setPage(1);
+                            }}
+                        >
+                            <option value="">All Types</option>
+                            {types.map(t => (
+                                <option key={t.id} value={t.id}>{t.label}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 {/* List */}
@@ -201,6 +222,36 @@ const AdminSubmissions: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {/* Quick Actions */}
+                                                {sub.status === 'SUBMITTED' || sub.status === 'UNDER_REVIEW' ? (
+                                                    <>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (confirm('Are you sure you want to approve this submission?')) {
+                                                                    await updateSubmissionStatus(sub.id, 'ACCEPTED');
+                                                                }
+                                                            }}
+                                                            className="inline-flex items-center justify-center size-8 rounded hover:bg-green-100 text-muted-foreground hover:text-green-700 transition-colors"
+                                                            title="Approve / Accept"
+                                                        >
+                                                            <CheckCircle className="size-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                const reason = prompt('Reason for rejection (optional):');
+                                                                if (reason !== null) {
+                                                                    await updateSubmissionStatus(sub.id, 'REJECTED');
+                                                                    // Note: In a real app we'd save the reason
+                                                                }
+                                                            }}
+                                                            className="inline-flex items-center justify-center size-8 rounded hover:bg-red-100 text-muted-foreground hover:text-red-700 transition-colors"
+                                                            title="Reject"
+                                                        >
+                                                            <XCircle className="size-4" />
+                                                        </button>
+                                                    </>
+                                                ) : null}
+
                                                 <Link
                                                     to={`/submissions/${sub.id}`}
                                                     className="inline-flex items-center justify-center size-8 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -211,9 +262,9 @@ const AdminSubmissions: React.FC = () => {
                                                 <button
                                                     onClick={() => openEditStatusModal(sub)}
                                                     className="inline-flex items-center justify-center size-8 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
-                                                    title="Change Status"
+                                                    title="Change Status (Advanced)"
                                                 >
-                                                    <CheckCircle className="size-4" />
+                                                    <MoreHorizontal className="size-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => openDeleteModal(sub)}

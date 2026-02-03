@@ -16,6 +16,9 @@ import AdminSubmissions from './pages/AdminSubmissions';
 import AdminFinance from './pages/AdminFinance';
 import AdminSettings from './pages/AdminSettings';
 import AdminLogs from './pages/AdminLogs';
+import AdminPostTypes from './pages/AdminPostTypes';
+import AdminPostTypeFields from './pages/AdminPostTypeFields';
+import AdminTaxonomies from './pages/AdminTaxonomies';
 import Books from './pages/Books';
 import BookDetail from './pages/BookDetail';
 import SignIn from './src/pages/SignIn';
@@ -100,6 +103,9 @@ export default function App() {
           <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
           <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
+          <Route path="/admin/post-types" element={<ProtectedRoute><AdminPostTypes /></ProtectedRoute>} />
+          <Route path="/admin/post-types/:id/fields" element={<ProtectedRoute><AdminPostTypeFields /></ProtectedRoute>} />
+          <Route path="/admin/taxonomies" element={<ProtectedRoute><AdminTaxonomies /></ProtectedRoute>} />
         </Routes>
         <DevNavigation />
       </div>

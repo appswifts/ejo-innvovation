@@ -21,48 +21,66 @@ export function useVenues(options: UseVenuesOptions = {}) {
         setLoading(true);
         setError(null);
 
-        let query = supabase.from('venues').select('*');
+        try {
+            let query = supabase.from('venues').select('*');
 
-        if (options.type) {
-            query = query.eq('type', options.type);
-        }
+            /* 
+            // Debug: Temporarily disable DB filtering to check raw data
+            if (options.type) {
+                query = query.eq('type', options.type);
+            }
 
-        if (options.activeOnly !== false) {
-            query = query.eq('is_active', true);
-        }
+            if (options.activeOnly !== false) {
+                query = query.eq('is_active', true);
+            }
+            */
 
-        const { data, error: fetchError } = await query.order('name');
+            const { data: rawData, error: fetchError } = await query.order('name');
 
-        if (fetchError) {
-            setError(fetchError.message);
+            if (fetchError) throw fetchError;
+
+            // Filter in memory to bypass potential RLS/Query issues
+            let data = rawData || [];
+            if (options.type) {
+                data = data.filter(v => v.type === options.type);
+            }
+            if (options.activeOnly !== false) {
+                data = data.filter(v => v.is_active === true);
+            }
+
+            // Fetch related journal/imprint data for each venue
+            const venuesWithDetails: VenueWithDetails[] = await Promise.all(
+                (data || []).map(async (venue) => {
+                    if (venue.type === 'JOURNAL') {
+                        const { data: journal } = await supabase
+                            .from('journals')
+                            .select('*')
+                            .eq('venue_id', venue.id)
+                            .single();
+                        return { ...venue, journal };
+                    } else if (venue.type === 'BOOK_IMPRINT') {
+                        const { data: imprint } = await supabase
+                            .from('imprints')
+                            .select('*')
+                            .eq('venue_id', venue.id)
+                            .single();
+                        return { ...venue, imprint };
+                    }
+                    return venue;
+                })
+            );
+
+            setVenues(venuesWithDetails);
+        } catch (err: any) {
+            if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+                // Ignore abort errors
+                return;
+            }
+            console.error('Error fetching venues:', err);
+            setError(err.message);
+        } finally {
             setLoading(false);
-            return;
         }
-
-        // Fetch related journal/imprint data for each venue
-        const venuesWithDetails: VenueWithDetails[] = await Promise.all(
-            (data || []).map(async (venue) => {
-                if (venue.type === 'JOURNAL') {
-                    const { data: journal } = await supabase
-                        .from('journals')
-                        .select('*')
-                        .eq('venue_id', venue.id)
-                        .single();
-                    return { ...venue, journal };
-                } else if (venue.type === 'BOOK_IMPRINT') {
-                    const { data: imprint } = await supabase
-                        .from('imprints')
-                        .select('*')
-                        .eq('venue_id', venue.id)
-                        .single();
-                    return { ...venue, imprint };
-                }
-                return venue;
-            })
-        );
-
-        setVenues(venuesWithDetails);
-        setLoading(false);
     }, [options.type, options.activeOnly]);
 
     useEffect(() => {
