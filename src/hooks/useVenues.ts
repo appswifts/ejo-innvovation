@@ -56,14 +56,14 @@ export function useVenues(options: UseVenuesOptions = {}) {
                             .from('journals')
                             .select('*')
                             .eq('venue_id', venue.id)
-                            .single();
+                            .maybeSingle();
                         return { ...venue, journal };
                     } else if (venue.type === 'BOOK_IMPRINT') {
                         const { data: imprint } = await supabase
                             .from('imprints')
                             .select('*')
                             .eq('venue_id', venue.id)
-                            .single();
+                            .maybeSingle();
                         return { ...venue, imprint };
                     }
                     return venue;
@@ -114,19 +114,19 @@ export function useVenue(slug: string) {
 
             let venueWithDetails: VenueWithDetails = data;
 
-            if (data.type === 'JOURNAL') {
+            if (data?.type === 'JOURNAL') {
                 const { data: journal } = await supabase
                     .from('journals')
                     .select('*')
                     .eq('venue_id', data.id)
-                    .single();
+                    .maybeSingle();
                 venueWithDetails = { ...data, journal };
-            } else if (data.type === 'BOOK_IMPRINT') {
+            } else if (data?.type === 'BOOK_IMPRINT') {
                 const { data: imprint } = await supabase
                     .from('imprints')
                     .select('*')
                     .eq('venue_id', data.id)
-                    .single();
+                    .maybeSingle();
                 venueWithDetails = { ...data, imprint };
             }
 

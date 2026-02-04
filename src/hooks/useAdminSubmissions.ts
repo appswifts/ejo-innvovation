@@ -122,6 +122,7 @@ export function useAdminSubmissions({ page = 1, limit = 10, search = '', status 
         error,
         refetch: fetchSubmissions,
         updateSubmissionStatus,
+        updateSubmission,
         deleteSubmission
     };
 }

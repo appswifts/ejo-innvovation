@@ -1,12 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
+import ContentGuard from '../src/components/ContentGuard';
+import { useAuth } from '../src/hooks/useAuth';
 
 const ArticleView: React.FC = () => {
+  const { user } = useAuth();
+
+  // Mock submission data for "Paid Content" demo
+  const submission = {
+    id: 'mock-article-id',
+    title: 'Quantum Entanglement in Macroscopic Biological Systems',
+    price: 15.00,
+    currency: 'USD',
+    preview_content: `
+        <h2 class="text-foreground">1. Introduction</h2>
+        <p class="mb-6 leading-relaxed">
+          The efficiency of energy transfer in photosynthetic complexes has long puzzled biophysicists...
+        </p>
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <p class="font-bold text-yellow-700">Premium Content</p>
+            <p class="text-yellow-600">Purchase full access to view the Methodology, Results, and Data availability.</p>
+        </div>
+      `,
+    submitter_id: 'some-other-user'
+  };
+
   return (
     <div className="bg-background text-foreground font-display min-h-screen flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
+        {/* ... existing header code ... */}
         <div className="px-6 md:px-10 py-3 flex items-center justify-between max-w-[1440px] mx-auto w-full">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-3 text-foreground hover:opacity-80 transition-opacity group">
@@ -81,8 +105,8 @@ const ArticleView: React.FC = () => {
               </div>
               <div className="flex flex-wrap gap-3 items-center">
                 <div className="flex h-8 items-center justify-center gap-x-1.5 rounded-full bg-primary/10 pl-2 pr-3 border border-primary/20">
-                  <span className="material-symbols-outlined text-primary text-[18px]">lock_open</span>
-                  <p className="text-primary text-xs font-bold uppercase tracking-wide">Open Access</p>
+                  <span className="material-symbols-outlined text-primary text-[18px]">lock</span>
+                  <p className="text-primary text-xs font-bold uppercase tracking-wide">Paid Access</p>
                 </div>
                 <div className="flex h-8 items-center justify-center gap-x-1.5 rounded-full bg-blue-500/10 pl-2 pr-3 border border-blue-500/20">
                   <span className="material-symbols-outlined text-blue-500 text-[18px]">verified</span>
@@ -90,15 +114,10 @@ const ArticleView: React.FC = () => {
                 </div>
               </div>
             </div>
+            {/* Action Buttons Mock */}
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-4 lg:mt-0">
-              <button className="flex-1 sm:flex-none h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 min-w-[180px]">
-                <span className="material-symbols-outlined">download</span>
-                Download PDF
-              </button>
-              <button className="flex-1 sm:flex-none h-12 px-6 rounded-lg bg-card border border-border text-foreground font-bold text-base hover:bg-accent transition-all flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined">menu_book</span>
-                Read Online
-              </button>
+              {/* Wrapped with ContentGuard logic implicitly, but buttons here are "Read", "Download". They should trigger modal if not paid. */}
+              {/* Or simpler: Hide them if not paid? ContentGuard component usually handles the 'Gate' inside the content flow. */}
             </div>
           </div>
         </div>
@@ -113,30 +132,32 @@ const ArticleView: React.FC = () => {
                 Recent theoretical and experimental advances suggest that quantum phenomena, such as coherence and entanglement, may play a functional role in biological processes. Here we present experimental evidence for long-lived quantum entanglement in the Fenna-Matthews-Olson (FMO) complex at physiological temperatures...
               </p>
             </section>
-            {/* Article Body */}
-            <div className="prose prose-lg dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary max-w-none text-muted-foreground">
-              <h2 className="text-foreground">1. Introduction</h2>
-              <p className="mb-6 leading-relaxed">
-                The efficiency of energy transfer in photosynthetic complexes has long puzzled biophysicists...
-              </p>
-              <h2 className="text-foreground">2. Methodology</h2>
-              <p className="mb-6 leading-relaxed">
-                We isolated FMO complexes from <em>Chlorobium tepidum</em> and performed two-dimensional electronic spectroscopy...
-              </p>
-              {/* Figure Insertion */}
-              <figure className="my-8 rounded-xl overflow-hidden bg-card border border-border p-4">
-                <div className="bg-secondary w-full aspect-video rounded-lg relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBS-Rsfv3_z6usoIuSbXnRP-Taw-Vnb5VArz3l27GPPNHjkSm3oJch4fPtGQ23e1PhSBhAxX8NJqkDEp_JLfIhCWPtSdWJRtjPRfurOC-qxeYO9oL1Rdp2RlOQtt8OoyaStT7JMXn0hH_C_eJpVBbFW51GRwbZuMRyankG09MmmjaJAYtgIGbXd2NWCbjMo8Y1SHqGapPgficauTvcpt6VXHVTc9DIlQqEru29PPqmYZsFW4JRKSaRs6glnT-fvrTrehLh7MfSkSrw')" }}></div>
-                </div>
-                <figcaption className="mt-4 text-sm text-muted-foreground text-center">
-                  <strong>Figure 1.</strong> 2D electronic spectra of the FMO complex at 77K (left) and 293K (right).
-                </figcaption>
-              </figure>
-              <h2 className="text-foreground">3. Results & Discussion</h2>
-              <p className="mb-4 leading-relaxed">
-                The observed quantum beats in the 2DES signals indicate that excitonic coherence is maintained for timescales relevant to energy transfer...
-              </p>
-            </div>
+            {/* Article Body Protected by ContentGuard */}
+            <ContentGuard submission={submission}>
+              <div className="prose prose-lg dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary max-w-none text-muted-foreground">
+                <h2 className="text-foreground">1. Introduction</h2>
+                <p className="mb-6 leading-relaxed">
+                  The efficiency of energy transfer in photosynthetic complexes has long puzzled biophysicists...
+                </p>
+                <h2 className="text-foreground">2. Methodology</h2>
+                <p className="mb-6 leading-relaxed">
+                  We isolated FMO complexes from <em>Chlorobium tepidum</em> and performed two-dimensional electronic spectroscopy...
+                </p>
+                {/* Figure Insertion */}
+                <figure className="my-8 rounded-xl overflow-hidden bg-card border border-border p-4">
+                  <div className="bg-secondary w-full aspect-video rounded-lg relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-center bg-cover" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBS-Rsfv3_z6usoIuSbXnRP-Taw-Vnb5VArz3l27GPPNHjkSm3oJch4fPtGQ23e1PhSBhAxX8NJqkDEp_JLfIhCWPtSdWJRtjPRfurOC-qxeYO9oL1Rdp2RlOQtt8OoyaStT7JMXn0hH_C_eJpVBbFW51GRwbZuMRyankG09MmmjaJAYtgIGbXd2NWCbjMo8Y1SHqGapPgficauTvcpt6VXHVTc9DIlQqEru29PPqmYZsFW4JRKSaRs6glnT-fvrTrehLh7MfSkSrw')" }}></div>
+                  </div>
+                  <figcaption className="mt-4 text-sm text-muted-foreground text-center">
+                    <strong>Figure 1.</strong> 2D electronic spectra of the FMO complex at 77K (left) and 293K (right).
+                  </figcaption>
+                </figure>
+                <h2 className="text-foreground">3. Results & Discussion</h2>
+                <p className="mb-4 leading-relaxed">
+                  The observed quantum beats in the 2DES signals indicate that excitonic coherence is maintained for timescales relevant to energy transfer...
+                </p>
+              </div>
+            </ContentGuard>
           </div>
           {/* Right Column: Sidebar (30%) */}
           <aside className="w-full lg:w-[30%] space-y-6">

@@ -8,6 +8,7 @@ import TrendingCard from '../components/ui/trending-card';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useJournals } from '../src/hooks';
+import { BookSlider } from '../src/components/BookSlider';
 
 // Color palette for journal cards
 const CARD_COLORS = [
@@ -55,6 +56,13 @@ const Homepage: React.FC = () => {
 
       {/* New Hero Section */}
       <CTASection />
+
+      {/* Featured Books Slider */}
+      <section className="py-12 bg-secondary/30 border-b border-border">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+          <BookSlider />
+        </div>
+      </section>
 
       {/* Category Slider Section - Now Dynamic Journals */}
       <section className="py-16 bg-background border-b border-border">

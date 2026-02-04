@@ -43,7 +43,7 @@ export const Footer: React.FC = () => {
                     <div>
                         <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Company</h3>
                         <ul className="space-y-3">
-                            <li><a className="text-sm text-muted-foreground hover:text-primary" href="#">About Us</a></li>
+                            <li><Link className="text-sm text-muted-foreground hover:text-primary" to="/about">About Us</Link></li>
                             <li><a className="text-sm text-muted-foreground hover:text-primary" href="#">Careers</a></li>
                             <li><a className="text-sm text-muted-foreground hover:text-primary" href="#">Legal</a></li>
                             <li><a className="text-sm text-muted-foreground hover:text-primary" href="#">Contact</a></li>

@@ -231,6 +231,49 @@ export type Database = {
                 }
                 Relationships: []
             }
+            submission_comments: {
+                Row: {
+                    id: string
+                    submission_id: string
+                    user_id: string
+                    content: string
+                    visibility: 'internal' | 'author' | 'public'
+                    created_at: string
+                    updated_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    submission_id: string
+                    user_id: string
+                    content: string
+                    visibility?: 'internal' | 'author' | 'public'
+                    created_at?: string
+                    updated_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    submission_id?: string
+                    user_id?: string
+                    content?: string
+                    visibility?: 'internal' | 'author' | 'public'
+                    created_at?: string
+                    updated_at?: string | null
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "submission_comments_submission_id_fkey"
+                        columns: ["submission_id"]
+                        referencedRelation: "submissions"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "submission_comments_user_id_fkey"
+                        columns: ["user_id"]
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
             reviews: {
                 Row: {
                     accepted_at: string | null

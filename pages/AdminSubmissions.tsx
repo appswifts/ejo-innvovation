@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DashboardLayout from '../src/layouts/DashboardLayout';
-import { Search, Filter, Eye, MoreHorizontal, Download, Trash2, CheckCircle, XCircle, AlertTriangle, X } from 'lucide-react';
+import { Search, Filter, Eye, MoreHorizontal, Download, Trash2, CheckCircle, XCircle, AlertTriangle, X, DollarSign } from 'lucide-react';
 import { useAdminSubmissions, useSubmissionTypes } from '../src/hooks';
 import { Link } from 'react-router-dom';
 import type { SubmissionStatus } from '../src/types/database';
@@ -20,7 +20,7 @@ const AdminSubmissions: React.FC = () => {
 
     const { types, loading: typesLoading } = useSubmissionTypes();
 
-    const { submissions, total, loading, error, updateSubmissionStatus, deleteSubmission } = useAdminSubmissions({
+    const { submissions, total, loading, error, updateSubmissionStatus, updateSubmission, deleteSubmission } = useAdminSubmissions({
         page,
         limit: 10,
         search: debouncedSearch,
@@ -33,6 +33,7 @@ const AdminSubmissions: React.FC = () => {
     // Modal states
     const [editStatusModalOpen, setEditStatusModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [pricingModalOpen, setPricingModalOpen] = useState(false);
     const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
     const [newStatus, setNewStatus] = useState<SubmissionStatus>('SUBMITTED');
     const [saving, setSaving] = useState(false);
@@ -76,6 +77,24 @@ const AdminSubmissions: React.FC = () => {
         await deleteSubmission(selectedSubmission.id);
         setSaving(false);
         setDeleteModalOpen(false);
+        setSelectedSubmission(null);
+    };
+
+    const openPricingModal = (submission: any) => {
+        setSelectedSubmission(submission);
+        setPricingModalOpen(true);
+    };
+
+    const handleSavePricing = async (price: number | null, currency: string, previewContent: string | null) => {
+        if (!selectedSubmission) return;
+        setSaving(true);
+        await updateSubmission(selectedSubmission.id, {
+            price,
+            currency,
+            preview_content: previewContent
+        });
+        setSaving(false);
+        setPricingModalOpen(false);
         setSelectedSubmission(null);
     };
 
@@ -253,7 +272,7 @@ const AdminSubmissions: React.FC = () => {
                                                 ) : null}
 
                                                 <Link
-                                                    to={`/submissions/${sub.id}`}
+                                                    to={`/admin/submissions/${sub.id}`}
                                                     className="inline-flex items-center justify-center size-8 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
                                                     title="View Details"
                                                 >
@@ -265,6 +284,14 @@ const AdminSubmissions: React.FC = () => {
                                                     title="Change Status (Advanced)"
                                                 >
                                                     <MoreHorizontal className="size-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => openPricingModal(sub)}
+                                                    className={`inline-flex items-center justify-center size-8 rounded transition-colors ${sub.price ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'hover:bg-yellow-100 text-muted-foreground hover:text-yellow-700'
+                                                        }`}
+                                                    title="Set Pricing"
+                                                >
+                                                    <DollarSign className="size-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => openDeleteModal(sub)}
@@ -387,7 +414,107 @@ const AdminSubmissions: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            {/* Pricing Modal */}
+            {pricingModalOpen && selectedSubmission && (
+                <PricingModal
+                    submission={selectedSubmission}
+                    onClose={() => setPricingModalOpen(false)}
+                    onSave={handleSavePricing}
+                    saving={saving}
+                />
+            )}
         </DashboardLayout>
+    );
+};
+
+// Simple Pricing Modal Component
+const PricingModal = ({ submission, onClose, onSave, saving }: any) => {
+    const [price, setPrice] = useState<string>(submission.price?.toString() || '');
+    const [currency, setCurrency] = useState(submission.currency || 'USD');
+    const [previewContent, setPreviewContent] = useState(submission.preview_content || '');
+    const [isFree, setIsFree] = useState(!submission.price || submission.price <= 0);
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-card rounded-xl shadow-xl max-w-lg w-full border border-border">
+                <div className="flex items-center justify-between p-4 border-b border-border">
+                    <h2 className="font-bold">Access & Pricing</h2>
+                    <button onClick={onClose} className="p-1 hover:bg-secondary rounded-lg transition-colors">
+                        <X className="size-4" />
+                    </button>
+                </div>
+                <div className="p-6 space-y-6">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="isFree"
+                            checked={isFree}
+                            onChange={(e) => {
+                                setIsFree(e.target.checked);
+                                if (e.target.checked) setPrice('');
+                            }}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor="isFree" className="text-sm font-medium">Make this content Free</label>
+                    </div>
+
+                    {!isFree && (
+                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase text-muted-foreground">Price</label>
+                                <input
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    value={price}
+                                    onChange={(e) => setPrice(e.target.value)}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold uppercase text-muted-foreground">Currency</label>
+                                <select
+                                    value={currency}
+                                    onChange={(e) => setCurrency(e.target.value)}
+                                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                >
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="RWF">RWF (FRw)</option>
+                                </select>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="space-y-1">
+                        <label className="text-xs font-semibold uppercase text-muted-foreground">
+                            Preview Content (HTML allowed)
+                            <span className="ml-2 text-[10px] normal-case font-normal text-muted-foreground">Shown to non-purchasers</span>
+                        </label>
+                        <textarea
+                            value={previewContent}
+                            onChange={(e) => setPreviewContent(e.target.value)}
+                            rows={6}
+                            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono"
+                            placeholder="<p>Enter a teaser description...</p>"
+                        />
+                    </div>
+                </div>
+                <div className="flex justify-end gap-2 p-4 border-t border-border">
+                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium rounded-lg hover:bg-secondary transition-colors">Cancel</button>
+                    <button
+                        onClick={() => onSave(isFree ? null : parseFloat(price), currency, previewContent)}
+                        disabled={saving}
+                        className="px-4 py-2 text-sm font-bold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
+            </div>
+        </div>
     );
 };
 

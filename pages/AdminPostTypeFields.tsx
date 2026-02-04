@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import DashboardLayout from '../src/layouts/DashboardLayout';
-import { Plus, ArrowLeft, GripVertical, Edit, Trash2, X, ToggleLeft, Type, Hash, Calendar, FileText, Link as LinkIcon, Mail, List, CheckSquare } from 'lucide-react';
-import { usePostTypeFields } from '../src/hooks/useAdminPostTypes';
+import { Plus, ArrowLeft, GripVertical, Edit, Trash2, X, ToggleLeft, Type, Hash, Calendar, FileText, Link as LinkIcon, Mail, List, CheckSquare, Tag } from 'lucide-react';
+import { usePostTypeFields, usePostTypeTaxonomies } from '../src/hooks/useAdminPostTypes';
 import { supabase } from '../src/lib/supabase';
 
 const FIELD_TYPES = [
@@ -24,6 +24,7 @@ const AdminPostTypeFields: React.FC = () => {
 
     const [postType, setPostType] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState<'fields' | 'taxonomies'>('fields');
     const [editingField, setEditingField] = useState<any>(null);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
@@ -147,97 +148,126 @@ const AdminPostTypeFields: React.FC = () => {
                     <Link to="/admin/post-types" className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 mb-4">
                         <ArrowLeft className="size-4" /> Back to Post Types
                     </Link>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center mb-6">
                         <div>
                             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                                {postType?.label || 'Post Type'} Fields
+                                {postType?.label || 'Post Type'} Configuration
                             </h1>
-                            <p className="text-muted-foreground mt-1">Configure the fields users will fill out when submitting this type.</p>
+                            <p className="text-muted-foreground mt-1">Configure the structure and classification of this post type.</p>
                         </div>
+                        {activeTab === 'fields' && (
+                            <button
+                                onClick={handleOpenCreate}
+                                className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition"
+                            >
+                                <Plus className="size-5" />
+                                <span>Add Field</span>
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex border-b border-border">
                         <button
-                            onClick={handleOpenCreate}
-                            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition"
+                            onClick={() => setActiveTab('fields')}
+                            className={`px-4 py-2 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'fields'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                                }`}
                         >
-                            <Plus className="size-5" />
-                            <span>Add Field</span>
+                            <List className="size-4" /> Fields
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('taxonomies')}
+                            className={`px-4 py-2 font-medium text-sm flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'taxonomies'
+                                ? 'border-primary text-primary'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            <Tag className="size-4" /> Linked Taxonomies
                         </button>
                     </div>
                 </div>
 
-                {loading ? (
-                    <div className="space-y-3">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="h-16 bg-card border border-border rounded-lg animate-pulse"></div>
-                        ))}
-                    </div>
-                ) : fields.length === 0 ? (
-                    <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
-                        <div className="size-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                            <FileText className="size-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-bold text-foreground mb-1">No Fields Configured</h3>
-                        <p className="mb-4">Add fields to define what information users provide when submitting.</p>
-                        <button
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold"
-                        >
-                            <Plus className="size-4" /> Add First Field
-                        </button>
-                    </div>
-                ) : (
-                    <div className="bg-card border border-border rounded-xl overflow-hidden">
-                        <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 p-3 border-b border-border bg-secondary/50 text-xs font-bold uppercase text-muted-foreground">
-                            <div className="w-6"></div>
-                            <div>Field</div>
-                            <div className="w-24 text-center">Type</div>
-                            <div className="w-20 text-center">Required</div>
-                            <div className="w-20 text-center">Actions</div>
-                        </div>
-                        {fields.map((field, index) => {
-                            const FieldIcon = getFieldIcon(field.field_type);
-                            return (
-                                <div key={field.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 p-3 border-b border-border last:border-0 items-center hover:bg-secondary/30 transition-colors">
-                                    <div className="w-6 flex items-center">
-                                        <GripVertical className="size-4 text-muted-foreground cursor-grab" />
-                                    </div>
-                                    <div>
-                                        <div className="font-medium text-foreground flex items-center gap-2">
-                                            <FieldIcon className="size-4 text-primary" />
-                                            {field.label}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground font-mono">key: {field.key}</div>
-                                    </div>
-                                    <div className="w-24 text-center">
-                                        <span className="text-xs bg-secondary px-2 py-1 rounded font-medium">
-                                            {field.field_type}
-                                        </span>
-                                    </div>
-                                    <div className="w-20 text-center">
-                                        {field.is_required ? (
-                                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">Yes</span>
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">No</span>
-                                        )}
-                                    </div>
-                                    <div className="w-20 flex items-center justify-center gap-1">
-                                        <button
-                                            onClick={() => handleOpenEdit(field)}
-                                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                                        >
-                                            <Edit className="size-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(field)}
-                                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    </div>
+                {activeTab === 'fields' && (
+                    <>
+                        {loading ? (
+                            <div className="space-y-3">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="h-16 bg-card border border-border rounded-lg animate-pulse"></div>
+                                ))}
+                            </div>
+                        ) : fields.length === 0 ? (
+                            <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground">
+                                <div className="size-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FileText className="size-8 text-muted-foreground" />
                                 </div>
-                            );
-                        })}
-                    </div>
+                                <h3 className="text-lg font-bold text-foreground mb-1">No Fields Configured</h3>
+                                <p className="mb-4">Add fields to define what information users provide when submitting.</p>
+                                <button
+                                    onClick={handleOpenCreate}
+                                    className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold"
+                                >
+                                    <Plus className="size-4" /> Add First Field
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="bg-card border border-border rounded-xl overflow-hidden">
+                                <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 p-3 border-b border-border bg-secondary/50 text-xs font-bold uppercase text-muted-foreground">
+                                    <div className="w-6"></div>
+                                    <div>Field</div>
+                                    <div className="w-24 text-center">Type</div>
+                                    <div className="w-20 text-center">Required</div>
+                                    <div className="w-20 text-center">Actions</div>
+                                </div>
+                                {fields.map((field, index) => {
+                                    const FieldIcon = getFieldIcon(field.field_type);
+                                    return (
+                                        <div key={field.id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-4 p-3 border-b border-border last:border-0 items-center hover:bg-secondary/30 transition-colors">
+                                            <div className="w-6 flex items-center">
+                                                <GripVertical className="size-4 text-muted-foreground cursor-grab" />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium text-foreground flex items-center gap-2">
+                                                    <FieldIcon className="size-4 text-primary" />
+                                                    {field.label}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground font-mono">key: {field.key}</div>
+                                            </div>
+                                            <div className="w-24 text-center">
+                                                <span className="text-xs bg-secondary px-2 py-1 rounded font-medium">
+                                                    {field.field_type}
+                                                </span>
+                                            </div>
+                                            <div className="w-20 text-center">
+                                                {field.is_required ? (
+                                                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">Yes</span>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">No</span>
+                                                )}
+                                            </div>
+                                            <div className="w-20 flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => handleOpenEdit(field)}
+                                                    className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                                                >
+                                                    <Edit className="size-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(field)}
+                                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                                >
+                                                    <Trash2 className="size-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </>
                 )}
+
+                {activeTab === 'taxonomies' && postTypeId && <LinkedTaxonomiesManager postTypeId={postTypeId} />}
             </div>
 
             {/* Create/Edit Modal */}
@@ -364,3 +394,130 @@ const AdminPostTypeFields: React.FC = () => {
 };
 
 export default AdminPostTypeFields;
+
+const LinkedTaxonomiesManager: React.FC<{ postTypeId: string }> = ({ postTypeId }) => {
+    const { linkedTaxonomies, loading, linkTaxonomy, unlinkTaxonomy, updateLink } = usePostTypeTaxonomies(postTypeId);
+    const [allTaxonomies, setAllTaxonomies] = useState<any[]>([]);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [loadingAll, setLoadingAll] = useState(false);
+
+    useEffect(() => {
+        if (isAddModalOpen) {
+            const fetchTaxonomies = async () => {
+                setLoadingAll(true);
+                try {
+                    const { data } = await supabase.from('taxonomies').select('*').eq('is_active', true);
+                    setAllTaxonomies(data || []);
+                } finally {
+                    setLoadingAll(false);
+                }
+            };
+            fetchTaxonomies();
+        }
+    }, [isAddModalOpen]);
+
+    const handleLink = async (taxonomyId: string) => {
+        await linkTaxonomy(taxonomyId);
+        setIsAddModalOpen(false);
+    };
+
+    const linkedIds = new Set(linkedTaxonomies.map(t => t.taxonomy_id));
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-card border border-border rounded-xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-bold">Linked Taxonomies</h2>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition"
+                    >
+                        <Plus className="size-4" /> Link Taxonomy
+                    </button>
+                </div>
+
+                {loading ? (
+                    <div className="space-y-3">
+                        {[1, 2].map(i => <div key={i} className="h-12 bg-secondary animate-pulse rounded-lg" />)}
+                    </div>
+                ) : linkedTaxonomies.length === 0 ? (
+                    <div className="text-center p-8 border border-dashed border-border rounded-lg text-muted-foreground">
+                        <Tag className="size-10 mx-auto mb-3 opacity-50" />
+                        <p>No taxonomies linked to this post type yet.</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-border border border-border rounded-lg overflow-hidden">
+                        {linkedTaxonomies.map((link) => (
+                            <div key={link.id} className="p-4 flex items-center justify-between hover:bg-secondary/30 transition-colors">
+                                <div>
+                                    <div className="font-bold flex items-center gap-2">
+                                        <Tag className="size-4 text-primary" />
+                                        {link.taxonomy?.label}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">{link.taxonomy?.description}</div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={link.is_required}
+                                            onChange={(e) => updateLink(link.taxonomy_id, { is_required: e.target.checked })}
+                                            className="rounded border-border"
+                                        />
+                                        Required
+                                    </label>
+                                    <button
+                                        onClick={() => unlinkTaxonomy(link.taxonomy_id)}
+                                        className="text-destructive hover:bg-destructive/10 p-2 rounded-md transition-colors"
+                                        title="Unlink"
+                                    >
+                                        <X className="size-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {isAddModalOpen && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-background rounded-xl shadow-xl w-full max-w-md border border-border">
+                        <div className="flex items-center justify-between p-6 border-b border-border">
+                            <h2 className="text-xl font-bold">Link Taxonomy</h2>
+                            <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-secondary rounded-full">
+                                <X className="size-5" />
+                            </button>
+                        </div>
+                        <div className="p-2 max-h-[60vh] overflow-y-auto">
+                            {loadingAll ? (
+                                <div className="p-4 text-center">Loading...</div>
+                            ) : (
+                                <div className="space-y-1">
+                                    {allTaxonomies.filter(t => !linkedIds.has(t.id)).map(tax => (
+                                        <button
+                                            key={tax.id}
+                                            onClick={() => handleLink(tax.id)}
+                                            className="w-full text-left p-3 hover:bg-secondary rounded-lg flex items-center justify-between group"
+                                        >
+                                            <div>
+                                                <div className="font-medium">{tax.label}</div>
+                                                <div className="text-xs text-muted-foreground">{tax.key}</div>
+                                            </div>
+                                            <Plus className="size-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </button>
+                                    ))}
+                                    {allTaxonomies.filter(t => !linkedIds.has(t.id)).length === 0 && (
+                                        <div className="p-8 text-center text-muted-foreground">
+                                            No other taxonomies available to link.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};

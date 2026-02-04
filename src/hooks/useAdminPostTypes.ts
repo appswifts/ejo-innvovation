@@ -292,3 +292,120 @@ export function usePostTypeFields(postTypeId: string | null) {
         reorderFields
     };
 }
+// Hook for managing taxonomies linked to a post type
+export function usePostTypeTaxonomies(postTypeId: string | null) {
+    const [linkedTaxonomies, setLinkedTaxonomies] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch linked taxonomies
+    const fetchLinkedTaxonomies = useCallback(async () => {
+        if (!postTypeId) {
+            setLinkedTaxonomies([]);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { data, error: fetchError } = await supabase
+                .from('submission_type_taxonomies')
+                .select(`
+                    *,
+                    taxonomy:taxonomies(*)
+                `)
+                .eq('submission_type_id', postTypeId);
+
+            if (fetchError) throw fetchError;
+            setLinkedTaxonomies(data || []);
+        } catch (err: any) {
+            console.error('Error fetching linked taxonomies:', err);
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [postTypeId]);
+
+    useEffect(() => {
+        fetchLinkedTaxonomies();
+    }, [fetchLinkedTaxonomies]);
+
+    // Link taxonomy
+    const linkTaxonomy = useCallback(async (taxonomyId: string, isRequired: boolean = false) => {
+        setSaving(true);
+        setError(null);
+        try {
+            const { error: insertError } = await supabase
+                .from('submission_type_taxonomies')
+                .insert({
+                    submission_type_id: postTypeId,
+                    taxonomy_id: taxonomyId,
+                    is_required: isRequired
+                });
+
+            if (insertError) throw insertError;
+            await fetchLinkedTaxonomies();
+            return { success: true };
+        } catch (err: any) {
+            setError(err.message);
+            return { success: false, error: err.message };
+        } finally {
+            setSaving(false);
+        }
+    }, [postTypeId, fetchLinkedTaxonomies]);
+
+    // Unlink taxonomy
+    const unlinkTaxonomy = useCallback(async (taxonomyId: string) => {
+        setSaving(true);
+        setError(null);
+        try {
+            const { error: deleteError } = await supabase
+                .from('submission_type_taxonomies')
+                .delete()
+                .eq('submission_type_id', postTypeId)
+                .eq('taxonomy_id', taxonomyId);
+
+            if (deleteError) throw deleteError;
+            await fetchLinkedTaxonomies();
+            return { success: true };
+        } catch (err: any) {
+            setError(err.message);
+            return { success: false, error: err.message };
+        } finally {
+            setSaving(false);
+        }
+    }, [postTypeId, fetchLinkedTaxonomies]);
+
+    // Update link (e.g. toggle required)
+    const updateLink = useCallback(async (taxonomyId: string, updates: { is_required?: boolean }) => {
+        setSaving(true);
+        setError(null);
+        try {
+            const { error: updateError } = await supabase
+                .from('submission_type_taxonomies')
+                .update(updates)
+                .eq('submission_type_id', postTypeId)
+                .eq('taxonomy_id', taxonomyId);
+
+            if (updateError) throw updateError;
+            await fetchLinkedTaxonomies();
+            return { success: true };
+        } catch (err: any) {
+            setError(err.message);
+            return { success: false, error: err.message };
+        } finally {
+            setSaving(false);
+        }
+    }, [postTypeId, fetchLinkedTaxonomies]);
+
+    return {
+        linkedTaxonomies,
+        loading,
+        saving,
+        error,
+        fetchLinkedTaxonomies,
+        linkTaxonomy,
+        unlinkTaxonomy,
+        updateLink
+    };
+}

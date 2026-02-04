@@ -34,6 +34,7 @@ export { useImageUpload } from './useImageUpload';
 // Admin
 export { useAdminStats } from './useAdminStats';
 export { useAdminSubmissions } from './useAdminSubmissions';
+export * from './useComments';
 export { useAdminUsers } from './useAdminUsers';
 export { useAdminJournals } from './useAdminJournals';
 export { useAdminBooks } from './useAdminBooks';

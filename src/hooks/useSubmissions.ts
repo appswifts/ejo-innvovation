@@ -12,6 +12,8 @@ import { useAuth } from './useAuth';
 interface SubmissionWithRelations extends Submission {
     submission_type?: SubmissionType | null;
     venue?: { name: string; slug: string; abbreviation: string | null } | null;
+    field_values?: any[]; // We use any[] for simplicity, ideally it would be typed
+    files?: any[];
 }
 
 interface UseSubmissionsOptions {
@@ -20,65 +22,83 @@ interface UseSubmissionsOptions {
     limit?: number;
 }
 
-export function useSubmissions(options: UseSubmissionsOptions = {}) {
+
+
+import { useQuery } from '@tanstack/react-query';
+
+export function useSubmissions(options: UseSubmissionsOptions & { publicFetch?: boolean } = {}) {
     const { user } = useAuth();
-    const [submissions, setSubmissions] = useState<SubmissionWithRelations[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
-    const fetchSubmissions = useCallback(async () => {
-        if (!user) {
-            setSubmissions([]);
-            setLoading(false);
-            return;
-        }
+    // Create a stable key for the query
+    const queryKey = ['submissions', {
+        userId: user?.id,
+        status: options.status,
+        venueId: options.venueId,
+        limit: options.limit,
+        publicFetch: options.publicFetch
+    }];
 
-        setLoading(true);
-        setError(null);
-
-        let query = supabase
-            .from('submissions')
-            .select(`
-        *,
-        submission_type:submission_types(*),
-        venue:venues(name, slug, abbreviation)
-      `)
-            .eq('submitter_id', user.id)
-            .order('created_at', { ascending: false });
-
-        if (options.status) {
-            if (Array.isArray(options.status)) {
-                query = query.in('status', options.status);
-            } else {
-                query = query.eq('status', options.status);
+    const { data: submissions = [], isLoading: loading, error } = useQuery({
+        queryKey,
+        queryFn: async () => {
+            // If requiring auth and no user, return empty unless publicFetch
+            if (!user && !options.publicFetch) {
+                return [];
             }
-        }
 
-        if (options.venueId) {
-            query = query.eq('venue_id', options.venueId);
-        }
+            let query = supabase
+                .from('submissions')
+                .select(`
+            *,
+            submission_type:submission_types(*),
+            venue:venues(name, slug, abbreviation),
+            field_values:submission_field_values(
+                *,
+                field:submission_fields(key, label)
+            ),
+            files:submission_files(*)
+          `)
+                .order('created_at', { ascending: false });
 
-        if (options.limit) {
-            query = query.limit(options.limit);
-        }
+            // Only filter by user if NOT public fetch
+            if (!options.publicFetch && user) {
+                query = query.eq('submitter_id', user.id);
+            }
 
-        const { data, error: fetchError } = await query;
+            if (options.status) {
+                if (Array.isArray(options.status)) {
+                    query = query.in('status', options.status);
+                } else {
+                    query = query.eq('status', options.status);
+                }
+            }
 
-        if (fetchError) {
-            setError(fetchError.message);
-            setLoading(false);
-            return;
-        }
+            if (options.venueId) {
+                query = query.eq('venue_id', options.venueId);
+            }
 
-        setSubmissions((data as any) || []);
-        setLoading(false);
-    }, [user, options.status, options.venueId, options.limit]);
+            if (options.limit) {
+                query = query.limit(options.limit);
+            }
 
-    useEffect(() => {
-        fetchSubmissions();
-    }, [fetchSubmissions]);
+            const { data, error } = await query;
+            if (error) throw new Error(error.message);
 
-    return { submissions, loading, error, refetch: fetchSubmissions };
+            return (data as any) || [];
+        },
+        // Only run query if we have a user OR it is a public fetch
+        enabled: !!user || !!options.publicFetch,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+
+    return {
+        submissions,
+        loading,
+        error: error instanceof Error ? error.message : null,
+        // Backward compatibility for refetch (React Query returns a promise, manually wrapping it if needed, 
+        // but react-query's refetch is compatible enough for most cases)
+        refetch: () => { /* useQuery handles refetching automatically, but we can expose client invalidation if needed */ }
+    };
 }
 
 export function useSubmission(id: string) {
@@ -101,7 +121,8 @@ export function useSubmission(id: string) {
                 .select(`
           *,
           submission_type:submission_types(*),
-          venue:venues(name, slug, abbreviation)
+          venue:venues(name, slug, abbreviation),
+          files:submission_files(*)
         `)
                 .eq('id', id)
                 .single();
