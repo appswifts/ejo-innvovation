@@ -12,6 +12,7 @@ import Submissions from './pages/Submissions';
 import Settings from './pages/Settings';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminJournals from './pages/AdminJournals';
+import SubscriptionPage from './src/pages/SubscriptionPage';
 import AdminBooks from './pages/AdminBooks';
 import AdminUsers from './pages/AdminUsers';
 import AdminSubmissions from './pages/AdminSubmissions';
@@ -49,6 +50,7 @@ const DevNavigation = () => {
           <Link to="/article" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/article' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Article View</Link>
           <Link to="/dashboard" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/dashboard' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Researcher Dashboard</Link>
           <Link to="/analytics" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/analytics' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Librarian Analytics</Link>
+          <Link to="/subscription" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/subscription' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Subscription Plans</Link>
           <Link to="/submit" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/submit' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Submission Wizard</Link>
         </div>
       )}
@@ -113,6 +115,7 @@ export default function App() {
               <Route path="/submit" element={<ProtectedRoute><SubmissionWizard /></ProtectedRoute>} />
               <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
               <Route path="/library" element={<ProtectedRoute><UserPurchases /></ProtectedRoute>} />
+              <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
               {/* Admin Pages - Require authentication (role check can be added later) */}
