@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const SignUp: React.FC = () => {
     const navigate = useNavigate();
-    const { signUp, loading, error } = useAuth();
+    const { signUp, error: authError } = useAuth(); // loading is only for auth check
 
     const [formData, setFormData] = useState({
         fullName: '',
@@ -18,6 +18,7 @@ const SignUp: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value, type, checked } = e.target;
@@ -46,18 +47,23 @@ const SignUp: React.FC = () => {
             return;
         }
 
+        setIsSubmitting(true);
         const result = await signUp(formData.email, formData.password, {
             full_name: formData.fullName,
             affiliation: formData.affiliation,
             is_student: formData.isStudent,
         });
 
-        if (!result.error) {
+        if (result.error) {
+            setLocalError(result.error.message);
+            setIsSubmitting(false);
+        } else {
             setSuccess(true);
+            setIsSubmitting(false);
         }
     };
 
-    const displayError = localError || error;
+    const displayError = localError || authError;
 
     if (success) {
         return (
@@ -268,10 +274,10 @@ const SignUp: React.FC = () => {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isSubmitting}
                             className="w-full py-3 px-4 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
-                            {loading ? (
+                            {isSubmitting ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <span className="size-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                                     Creating account...

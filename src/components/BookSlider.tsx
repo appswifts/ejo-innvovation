@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useSubmissions } from '../hooks/useSubmissions';
+import { useBooks } from '../hooks/useBooks';
 import { BookOpen, AlertCircle } from 'lucide-react';
 
 const BookCover: React.FC<{ url?: string; title: string }> = ({ url, title }) => (
@@ -24,16 +24,7 @@ const BookCover: React.FC<{ url?: string; title: string }> = ({ url, title }) =>
 );
 
 export const BookSlider: React.FC = () => {
-    // We'll filter for "Book" type in the component for now, 
-    // assuming 'book' or 'ebook' is part of the type key or label using client-side filtering if hook doesn't support generic filtering yet.
-    // Actually, useSubmissions returns submission_type relation, so we can filter.
-    const { submissions, loading, error } = useSubmissions({ limit: 10, status: 'PUBLISHED', publicFetch: true });
-
-    // Filter for books (checking type key or label)
-    const books = submissions.filter(s =>
-        s.submission_type?.key?.toLowerCase().includes('book') ||
-        s.submission_type?.label?.toLowerCase().includes('book')
-    );
+    const { books, loading, error } = useBooks();
 
     if (loading) {
         return (
@@ -68,26 +59,30 @@ export const BookSlider: React.FC = () => {
                 {books.map((book) => (
                     <Link
                         key={book.id}
-                        to={`/books/${book.id}`}
+                        to={`/books/${book.slug}`}
                         className="snap-start shrink-0 w-[160px] md:w-[180px] flex-none"
                     >
                         <BookCover
-                            url={
-                                // Find value where key is 'cover_image' or 'featured_image'
-                                book.field_values?.find((v: any) => v.field.key === 'cover_image' || v.field.key === 'featured_image')?.value_text ||
-                                book.field_values?.find((v: any) => v.field.key === 'cover_image' || v.field.key === 'featured_image')?.value_file // assuming file path might be stored here? 
-                                // Actually, file type stores path in value_text usually, or value_json if multiple?
-                                // Database schema says value_text for string.
-                            }
+                            url={book.cover_image_url || undefined}
                             title={book.title}
                         />
                         <h3 className="mt-3 font-bold text-sm leading-tight text-foreground line-clamp-2 hover:text-primary transition-colors">
                             {book.title}
                         </h3>
-                        {/* If we had author info easily accessible here, we'd show it */}
                         <p className="text-xs text-muted-foreground mt-1">
-                            {book.venue?.name || 'Independent'}
+                            {book.authors && book.authors.length > 0
+                                ? book.authors.map(a => a.name).slice(0, 2).join(', ')
+                                : 'Unknown Author'}
                         </p>
+                        <div className="mt-1">
+                            {book.access_type === 'open_access' ? (
+                                <span className="text-xs font-medium text-green-600">Open Access</span>
+                            ) : book.price_usd ? (
+                                <span className="text-xs font-medium text-primary">${book.price_usd.toFixed(2)}</span>
+                            ) : (
+                                <span className="text-xs font-medium text-muted-foreground">Free</span>
+                            )}
+                        </div>
                     </Link>
                 ))}
             </div>

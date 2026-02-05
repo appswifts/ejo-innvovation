@@ -38,6 +38,7 @@ export * from './useComments';
 export { useAdminUsers } from './useAdminUsers';
 export { useAdminJournals } from './useAdminJournals';
 export { useAdminBooks } from './useAdminBooks';
+export { useAdminCareer } from './useAdminCareer';
 
 // General
 export { useGlobalSearch } from './useGlobalSearch';
@@ -45,3 +46,10 @@ export { usePayment } from './usePayment';
 
 // User Roles
 export { useUserRoles } from './useUserRoles';
+
+// Books
+export { useBooks, useBook } from './useBooks';
+
+// Career
+export { useCareerJobs, useCareerJob } from './useCareerJobs';
+

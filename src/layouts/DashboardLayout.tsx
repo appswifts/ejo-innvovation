@@ -38,7 +38,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, showSidebar
                     <div className="px-3 py-1 text-xs font-bold text-muted-foreground uppercase tracking-wider">Administration</div>
                     <NavLink to="/admin" icon="dashboard" label="Overview" />
                     <NavLink to="/admin/journals" icon="menu_book" label="Journals" />
-                    <NavLink to="/admin/post-types" icon="category" label="Post Types" />
+
                     <NavLink to="/admin/taxonomies" icon="sell" label="Taxonomies" />
                     <NavLink to="/admin/users" icon="group" label="Users" />
                     <NavLink to="/admin/submissions" icon="description" label="All Submissions" />

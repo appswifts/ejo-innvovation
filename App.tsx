@@ -19,9 +19,9 @@ import AdminSubmissionDetail from './pages/AdminSubmissionDetail';
 import AdminFinance from './pages/AdminFinance';
 import AdminSettings from './pages/AdminSettings';
 import AdminLogs from './pages/AdminLogs';
-import AdminPostTypes from './pages/AdminPostTypes';
-import AdminPostTypeFields from './pages/AdminPostTypeFields';
+
 import AdminTaxonomies from './pages/AdminTaxonomies';
+import AdminCareer from './pages/AdminCareer';
 import Books from './pages/Books';
 import Career from './pages/Career';
 import BookDetail from './pages/BookDetail';
@@ -33,6 +33,7 @@ import Journals from './src/pages/Journals';
 import JournalDetail from './src/pages/JournalDetail';
 import UserPurchases from './pages/UserPurchases';
 import { ProtectedRoute, PublicRoute } from './src/components';
+import { AuthProvider } from './src/contexts/AuthContext';
 
 const DevNavigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,7 +76,7 @@ const ScrollToTop = () => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 0, // Disable caching
       retry: 1,
     },
   },
@@ -84,52 +85,54 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <HashRouter>
-        <ScrollToTop />
-        <div className="min-h-screen bg-background text-foreground font-display">
-          <Routes>
-            {/* Public Pages - Accessible to everyone */}
-            <Route path="/" element={<Homepage />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/search" element={<GlobalSearch />} />
-            <Route path="/article" element={<ArticleView />} />
-            <Route path="/journals" element={<Journals />} />
-            <Route path="/journals/:slug" element={<JournalDetail />} />
-            <Route path="/books" element={<Books />} />
-            <Route path="/books/:id" element={<BookDetail />} />
-            <Route path="/career" element={<Career />} />
+      <AuthProvider>
+        <HashRouter>
+          <ScrollToTop />
+          <div className="min-h-screen bg-background text-foreground font-display">
+            <Routes>
+              {/* Public Pages - Accessible to everyone */}
+              <Route path="/" element={<Homepage />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/search" element={<GlobalSearch />} />
+              <Route path="/article" element={<ArticleView />} />
+              <Route path="/journals" element={<Journals />} />
+              <Route path="/journals/:slug" element={<JournalDetail />} />
+              <Route path="/books" element={<Books />} />
+              <Route path="/books/:id" element={<BookDetail />} />
+              <Route path="/career" element={<Career />} />
 
-            {/* Auth Pages - Only accessible when NOT logged in */}
-            <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
-            <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-            <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+              {/* Auth Pages - Only accessible when NOT logged in */}
+              <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Protected Pages - Require authentication */}
-            <Route path="/dashboard" element={<ProtectedRoute><ResearcherDashboard /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><LibrarianAnalytics /></ProtectedRoute>} />
-            <Route path="/submit" element={<ProtectedRoute><SubmissionWizard /></ProtectedRoute>} />
-            <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
-            <Route path="/library" element={<ProtectedRoute><UserPurchases /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Protected Pages - Require authentication */}
+              <Route path="/dashboard" element={<ProtectedRoute><ResearcherDashboard /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><LibrarianAnalytics /></ProtectedRoute>} />
+              <Route path="/submit" element={<ProtectedRoute><SubmissionWizard /></ProtectedRoute>} />
+              <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
+              <Route path="/library" element={<ProtectedRoute><UserPurchases /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
-            {/* Admin Pages - Require authentication (role check can be added later) */}
-            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/admin/journals" element={<ProtectedRoute><AdminJournals /></ProtectedRoute>} />
-            <Route path="/admin/books" element={<ProtectedRoute><AdminBooks /></ProtectedRoute>} />
-            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/admin/submissions" element={<ProtectedRoute><AdminSubmissions /></ProtectedRoute>} />
-            <Route path="/admin/submissions/:id" element={<ProtectedRoute><AdminSubmissionDetail /></ProtectedRoute>} />
-            <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />
-            <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-            <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
-            <Route path="/admin/post-types" element={<ProtectedRoute><AdminPostTypes /></ProtectedRoute>} />
-            <Route path="/admin/post-types/:id/fields" element={<ProtectedRoute><AdminPostTypeFields /></ProtectedRoute>} />
-            <Route path="/admin/taxonomies" element={<ProtectedRoute><AdminTaxonomies /></ProtectedRoute>} />
-          </Routes>
-          <DevNavigation />
-        </div>
-      </HashRouter>
+              {/* Admin Pages - Require authentication (role check can be added later) */}
+              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+              <Route path="/admin/journals" element={<ProtectedRoute><AdminJournals /></ProtectedRoute>} />
+              <Route path="/admin/books" element={<ProtectedRoute><AdminBooks /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+              <Route path="/admin/submissions" element={<ProtectedRoute><AdminSubmissions /></ProtectedRoute>} />
+              <Route path="/admin/submissions/:id" element={<ProtectedRoute><AdminSubmissionDetail /></ProtectedRoute>} />
+              <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+              <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
+
+              <Route path="/admin/taxonomies" element={<ProtectedRoute><AdminTaxonomies /></ProtectedRoute>} />
+              <Route path="/admin/career" element={<ProtectedRoute><AdminCareer /></ProtectedRoute>} />
+            </Routes>
+            <DevNavigation />
+          </div>
+        </HashRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

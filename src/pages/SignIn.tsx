@@ -5,12 +5,13 @@ import { useAuth } from '../hooks/useAuth';
 
 const SignIn: React.FC = () => {
     const navigate = useNavigate();
-    const { signIn, loading, error } = useAuth();
+    const { signIn, error: authError } = useAuth(); // Renamed error to authError to avoid confusion if needed, though we use localError mostly
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,14 +22,19 @@ const SignIn: React.FC = () => {
             return;
         }
 
+        setIsSubmitting(true);
         const result = await signIn(email, password);
 
-        if (!result.error) {
+        if (result.error) {
+            setLocalError(result.error.message);
+            setIsSubmitting(false);
+        } else {
+            // Success, navigation happens, keep loading state to prevent double submission
             navigate('/dashboard');
         }
     };
 
-    const displayError = localError || error;
+    const displayError = localError || authError;
 
     return (
         <div className="min-h-screen bg-background flex">
@@ -148,10 +154,10 @@ const SignIn: React.FC = () => {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={isSubmitting}
                             className="w-full py-3 px-4 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
-                            {loading ? (
+                            {isSubmitting ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <span className="size-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                                     Signing in...
