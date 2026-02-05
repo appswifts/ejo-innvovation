@@ -7,7 +7,7 @@ import { useAdminPostTypes } from '../src/hooks/useAdminPostTypes';
 const VENUE_TYPES = ['JOURNAL', 'BOOK_IMPRINT'];
 
 const AdminPostTypes: React.FC = () => {
-    const { postTypes, loading, fetchPostTypes, createPostType, updatePostType, archivePostType, restorePostType } = useAdminPostTypes();
+    const { postTypes, loading, fetchPostTypes, updatePostType, archivePostType, restorePostType } = useAdminPostTypes();
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -55,11 +55,13 @@ const AdminPostTypes: React.FC = () => {
         e.preventDefault();
         setIsActionLoading(true);
 
+        // Only allow updates, no creation
         let result;
         if (editingType) {
             result = await updatePostType(editingType.id, formData as any);
         } else {
-            result = await createPostType(formData as any);
+            // Fallback/Error state if somehow triggered
+            result = { success: false, error: 'Creation disabled' };
         }
 
         if (result.success) {
@@ -99,15 +101,8 @@ const AdminPostTypes: React.FC = () => {
                 <div className="flex justify-between items-center mb-8">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-foreground">Post Types</h1>
-                        <p className="text-muted-foreground mt-1">Configure submission types that users can create (Articles, Books, PDFs, etc.)</p>
+                        <p className="text-muted-foreground mt-1">Manage the structure of system-defined content types.</p>
                     </div>
-                    <button
-                        onClick={handleOpenCreate}
-                        className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-bold shadow-sm hover:bg-primary/90 transition"
-                    >
-                        <Plus className="size-5" />
-                        <span>Add Post Type</span>
-                    </button>
                 </div>
 
                 {loading ? (

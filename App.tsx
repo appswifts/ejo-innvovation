@@ -23,6 +23,7 @@ import AdminPostTypes from './pages/AdminPostTypes';
 import AdminPostTypeFields from './pages/AdminPostTypeFields';
 import AdminTaxonomies from './pages/AdminTaxonomies';
 import Books from './pages/Books';
+import Career from './pages/Career';
 import BookDetail from './pages/BookDetail';
 import SignIn from './src/pages/SignIn';
 import SignUp from './src/pages/SignUp';
@@ -96,6 +97,7 @@ export default function App() {
             <Route path="/journals/:slug" element={<JournalDetail />} />
             <Route path="/books" element={<Books />} />
             <Route path="/books/:id" element={<BookDetail />} />
+            <Route path="/career" element={<Career />} />
 
             {/* Auth Pages - Only accessible when NOT logged in */}
             <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />

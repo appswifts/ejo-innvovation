@@ -66,15 +66,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, showSidebar
         // Default Researcher Navigation
         return (
             <nav className="flex flex-col gap-2 mt-4">
-                <NavLink to="/dashboard" icon="dashboard" label="Dashboard" />
-                <NavLink to="/submit" icon="add_circle" label="Submit" />
-                <NavLink to="/submissions" icon="description" label="Submissions" />
+                <NavLink to="/journals" icon="menu_book" label="Journals" />
                 <NavLink to="/books" icon="library_books" label="Books" />
-                <NavLink to="/analytics" icon="bar_chart" label="Publications" />
-
-                <div className="h-px bg-border my-2 mx-3"></div>
-
-                <NavLink to="/settings" icon="settings" label="Settings" />
+                <NavLink to="/career" icon="work" label="Career" />
 
                 {/* Admin Access Button */}
                 {isAdmin && (
