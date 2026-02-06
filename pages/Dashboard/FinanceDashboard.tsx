@@ -195,7 +195,7 @@ const FinanceDashboard: React.FC = () => {
 
   return (
     <div className="h-full bg-background-light overflow-y-auto">
-      <main className="max-w-7xl mx-auto w-full px-4 lg:px-10 py-8">
+      <main className="mx-auto w-full px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
         <div className="flex justify-between items-end mb-8">
           <div>
             <h1 className="text-slate-900 text-3xl font-black font-serif tracking-tight mb-2">Financial Administration</h1>
