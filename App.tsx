@@ -1,141 +1,86 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import Homepage from './pages/Homepage';
-import About from './pages/About';
-import GlobalSearch from './pages/GlobalSearch';
-import ArticleView from './pages/ArticleView';
-import ResearcherDashboard from './pages/ResearcherDashboard';
-import LibrarianAnalytics from './pages/LibrarianAnalytics';
-import SubmissionWizard from './pages/SubmissionWizard';
-import Submissions from './pages/Submissions';
-import Settings from './pages/Settings';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminJournals from './pages/AdminJournals';
-import SubscriptionPage from './src/pages/SubscriptionPage';
-import AdminBooks from './pages/AdminBooks';
-import AdminUsers from './pages/AdminUsers';
-import AdminSubmissions from './pages/AdminSubmissions';
-import AdminSubmissionDetail from './pages/AdminSubmissionDetail';
-import AdminFinance from './pages/AdminFinance';
-import AdminSettings from './pages/AdminSettings';
-import AdminLogs from './pages/AdminLogs';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ViewState } from './types';
+import { useAuth } from './contexts/AuthContext';
+import Login from './pages/Auth/Login';
+import Signup from './pages/Auth/Signup';
+import LandingPage from './pages/Public/LandingPage';
+import JournalsPage from './pages/Public/JournalsPage';
+import JournalDetail from './pages/Public/JournalDetail';
+import ArticleView from './pages/Public/ArticleView';
+import BooksPage from './pages/Public/BooksPage';
+import BookReader from './pages/Public/BookReader';
+import CheckoutPage from './pages/Public/CheckoutPage';
+import SubmissionWizard from './pages/Dashboard/SubmissionWizard';
+// Dashboard Widgets
+import DashboardLayout from './components/DashboardLayout';
+import Overview from './pages/Dashboard/Overview';
+import AuthorDashboard from './pages/Dashboard/AuthorDashboard'; // To be refactored into widgets later, using as page for now
+import EditorDashboard from './pages/Dashboard/EditorDashboard';
+import ManuscriptDetailPage from './pages/Dashboard/ManuscriptDetail';
+import ReviewerPortal from './pages/Dashboard/ReviewerPortal';
+import FinanceDashboard from './pages/Dashboard/FinanceDashboard';
+import UserManagement from './pages/Dashboard/Admin/UserManagement';
+import JournalManagement from './pages/Dashboard/Admin/JournalManagement';
+import RoleManager from './pages/Dashboard/Admin/RoleManager';
+import BookManagement from './pages/Dashboard/Admin/BookManagement';
 
-import AdminTaxonomies from './pages/AdminTaxonomies';
-import AdminCareer from './pages/AdminCareer';
-import Books from './pages/Books';
-import Career from './pages/Career';
-import BookDetail from './pages/BookDetail';
-import SignIn from './src/pages/SignIn';
-import SignUp from './src/pages/SignUp';
-import ForgotPassword from './src/pages/ForgotPassword';
-import ResetPassword from './src/pages/ResetPassword';
-import Journals from './src/pages/Journals';
-import JournalDetail from './src/pages/JournalDetail';
-import UserPurchases from './pages/UserPurchases';
-import { ProtectedRoute, PublicRoute } from './src/components';
-import { AuthProvider } from './src/contexts/AuthContext';
+const App: React.FC = () => {
+  const { user, loading, profile } = useAuth();
 
-const DevNavigation = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const location = useLocation();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background-light">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col items-end gap-2">
-      {isOpen && (
-        <div className="bg-card border border-border rounded-lg shadow-xl p-2 flex flex-col gap-1 w-64 mb-2">
-          <div className="text-xs font-bold text-muted-foreground px-2 py-1 uppercase tracking-wider">Pages</div>
-          <Link to="/" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Homepage</Link>
-          <Link to="/search" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/search' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Global Search</Link>
-          <Link to="/article" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/article' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Article View</Link>
-          <Link to="/dashboard" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/dashboard' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Researcher Dashboard</Link>
-          <Link to="/analytics" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/analytics' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Librarian Analytics</Link>
-          <Link to="/subscription" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/subscription' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Subscription Plans</Link>
-          <Link to="/submit" className={`px-3 py-2 text-sm rounded-md transition-colors ${location.pathname === '/submit' ? 'bg-primary/10 text-primary font-bold' : 'hover:bg-accent hover:text-accent-foreground text-foreground'}`}>Submission Wizard</Link>
-        </div>
-      )}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-primary hover:bg-primary/90 text-primary-foreground p-3 rounded-full shadow-lg flex items-center justify-center transition-all"
-      >
-        <span className="material-symbols-outlined">{isOpen ? 'close' : 'menu'}</span>
-      </button>
+    <div className="min-h-screen relative">
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/journals" element={<JournalsPage />} />
+        <Route path="/journals/:id" element={<JournalDetail />} />
+        <Route path="/articles/:id" element={<ArticleView />} />
+        <Route path="/books" element={<BooksPage />} />
+        <Route path="/book/read/:id" element={<BookReader />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+
+        {/* Dashboard Routes (Protected) */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Overview />} />
+          <Route path="overview" element={<Overview />} />
+
+          {/* Author Routes */}
+          <Route path="submit" element={<SubmissionWizard />} />
+          <Route path="my-manuscripts" element={<AuthorDashboard />} />
+
+          {/* Editor Routes */}
+          <Route path="submissions" element={<EditorDashboard />} />
+          <Route path="submissions/:id" element={<ManuscriptDetailPage />} />
+
+          {/* Reviewer Routes */}
+          <Route path="reviews" element={<ReviewerPortal />} />
+
+          {/* Finance Routes */}
+          <Route path="finance" element={<FinanceDashboard />} />
+
+          {/* Admin Routes */}
+          <Route path="admin/users" element={<UserManagement />} />
+          <Route path="admin/journals" element={<JournalManagement />} />
+          <Route path="admin/roles" element={<RoleManager />} />
+          <Route path="admin/books" element={<BookManagement />} />
+        </Route>
+
+        {/* Catch All */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 };
 
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-
-  React.useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 0, // Disable caching
-      retry: 1,
-    },
-  },
-});
-
-export default function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <HashRouter>
-          <ScrollToTop />
-          <div className="min-h-screen bg-background text-foreground font-display">
-            <Routes>
-              {/* Public Pages - Accessible to everyone */}
-              <Route path="/" element={<Homepage />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/search" element={<GlobalSearch />} />
-              <Route path="/article" element={<ArticleView />} />
-              <Route path="/journals" element={<Journals />} />
-              <Route path="/journals/:slug" element={<JournalDetail />} />
-              <Route path="/books" element={<Books />} />
-              <Route path="/books/:id" element={<BookDetail />} />
-              <Route path="/career" element={<Career />} />
-
-              {/* Auth Pages - Only accessible when NOT logged in */}
-              <Route path="/signin" element={<PublicRoute><SignIn /></PublicRoute>} />
-              <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-              <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-
-              {/* Protected Pages - Require authentication */}
-              <Route path="/dashboard" element={<ProtectedRoute><ResearcherDashboard /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><LibrarianAnalytics /></ProtectedRoute>} />
-              <Route path="/submit" element={<ProtectedRoute><SubmissionWizard /></ProtectedRoute>} />
-              <Route path="/submissions" element={<ProtectedRoute><Submissions /></ProtectedRoute>} />
-              <Route path="/library" element={<ProtectedRoute><UserPurchases /></ProtectedRoute>} />
-              <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
-              {/* Admin Pages - Require authentication (role check can be added later) */}
-              <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-              <Route path="/admin/journals" element={<ProtectedRoute><AdminJournals /></ProtectedRoute>} />
-              <Route path="/admin/books" element={<ProtectedRoute><AdminBooks /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-              <Route path="/admin/submissions" element={<ProtectedRoute><AdminSubmissions /></ProtectedRoute>} />
-              <Route path="/admin/submissions/:id" element={<ProtectedRoute><AdminSubmissionDetail /></ProtectedRoute>} />
-              <Route path="/admin/finance" element={<ProtectedRoute><AdminFinance /></ProtectedRoute>} />
-              <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
-              <Route path="/admin/logs" element={<ProtectedRoute><AdminLogs /></ProtectedRoute>} />
-
-              <Route path="/admin/taxonomies" element={<ProtectedRoute><AdminTaxonomies /></ProtectedRoute>} />
-              <Route path="/admin/career" element={<ProtectedRoute><AdminCareer /></ProtectedRoute>} />
-            </Routes>
-            <DevNavigation />
-          </div>
-        </HashRouter>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-}
+export default App;
