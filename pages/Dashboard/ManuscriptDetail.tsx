@@ -61,6 +61,28 @@ const ManuscriptDetailPage: React.FC = () => {
         }
     }, [manuscript?.id]);
 
+    const fetchComments = async (manuscriptId: string) => {
+        try {
+            console.log('Fetching comments for manuscript:', manuscriptId);
+            const { data, error } = await supabase
+                .from('manuscript_comments')
+                .select(`
+                    *,
+                    author:profiles(full_name)
+                `)
+                .eq('manuscript_id', manuscriptId)
+                .order('created_at', { ascending: false });
+
+            console.log('Comments data:', data);
+            console.log('Comments error:', error);
+
+            if (error) throw error;
+            setComments(data || []);
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+        }
+    };
+
     const fetchManuscript = async (manuscriptId: string) => {
         try {
             setLoading(true);
@@ -95,28 +117,6 @@ const ManuscriptDetailPage: React.FC = () => {
             console.error('Error fetching manuscript:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchComments = async (manuscriptId: string) => {
-        try {
-            console.log('Fetching comments for manuscript:', manuscriptId);
-            const { data, error } = await supabase
-                .from('manuscript_comments')
-                .select(`
-                    *,
-                    author:profiles(full_name)
-                `)
-                .eq('manuscript_id', manuscriptId)
-                .order('created_at', { ascending: false });
-
-            console.log('Comments data:', data);
-            console.log('Comments error:', error);
-
-            if (error) throw error;
-            setComments(data || []);
-        } catch (error) {
-            console.error('Error fetching comments:', error);
         }
     };
 
