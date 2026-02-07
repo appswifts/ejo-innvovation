@@ -25,24 +25,35 @@ const UserManagement: React.FC = () => {
     };
 
     const updateUserRole = async (userId: string, newRoleSlug: string) => {
+        console.log('Updating role for user:', userId, 'to:', newRoleSlug);
+        console.log('Available roles:', roles);
+
         const role = roles.find(r => r.slug === newRoleSlug);
         if (!role) {
+            console.error('Role not found for slug:', newRoleSlug);
             alert('Role not found.');
             return;
         }
 
-        const { error } = await supabase
+        console.log('Found role:', role);
+
+        const { data, error } = await supabase
             .from('profiles')
             .update({ role_id: role.id })
-            .eq('id', userId);
+            .eq('id', userId)
+            .select();
+
+        console.log('Update result:', { data, error });
 
         if (error) {
             console.error('Error updating role:', error);
             alert(`Failed to update role: ${error.message}. Please ensure you have admin permissions and the required database policies are in place.`);
         } else {
-            fetchData(); // Refresh
+            console.log('Role updated successfully, refreshing...');
+            await fetchData(); // Refresh
         }
     };
+
 
     return (
         <div className="p-8 max-w-7xl mx-auto">
