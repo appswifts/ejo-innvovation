@@ -51,9 +51,15 @@ const ManuscriptDetailPage: React.FC = () => {
     useEffect(() => {
         if (id) {
             fetchManuscript(id);
-            fetchComments(id);
         }
     }, [id]);
+
+    // Fetch comments when manuscript is loaded (using actual UUID)
+    useEffect(() => {
+        if (manuscript?.id) {
+            fetchComments(manuscript.id);
+        }
+    }, [manuscript?.id]);
 
     const fetchManuscript = async (manuscriptId: string) => {
         try {
@@ -80,6 +86,11 @@ const ManuscriptDetailPage: React.FC = () => {
 
             if (error) throw error;
             setManuscript(data);
+
+            // Fetch comments using the actual manuscript UUID
+            if (data?.id) {
+                fetchComments(data.id);
+            }
         } catch (error) {
             console.error('Error fetching manuscript:', error);
         } finally {
@@ -89,6 +100,7 @@ const ManuscriptDetailPage: React.FC = () => {
 
     const fetchComments = async (manuscriptId: string) => {
         try {
+            console.log('Fetching comments for manuscript:', manuscriptId);
             const { data, error } = await supabase
                 .from('manuscript_comments')
                 .select(`
@@ -97,6 +109,9 @@ const ManuscriptDetailPage: React.FC = () => {
                 `)
                 .eq('manuscript_id', manuscriptId)
                 .order('created_at', { ascending: false });
+
+            console.log('Comments data:', data);
+            console.log('Comments error:', error);
 
             if (error) throw error;
             setComments(data || []);
@@ -142,7 +157,7 @@ const ManuscriptDetailPage: React.FC = () => {
             if (error) throw error;
 
             setNewComment('');
-            fetchComments(id);
+            fetchComments(manuscript.id);
         } catch (error) {
             console.error('Error adding comment:', error);
             alert('Failed to add comment.');
