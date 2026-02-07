@@ -26,14 +26,20 @@ const UserManagement: React.FC = () => {
 
     const updateUserRole = async (userId: string, newRoleSlug: string) => {
         const role = roles.find(r => r.slug === newRoleSlug);
-        if (!role) return;
+        if (!role) {
+            alert('Role not found.');
+            return;
+        }
 
         const { error } = await supabase
             .from('profiles')
             .update({ role_id: role.id })
             .eq('id', userId);
 
-        if (!error) {
+        if (error) {
+            console.error('Error updating role:', error);
+            alert(`Failed to update role: ${error.message}. Please ensure you have admin permissions and the required database policies are in place.`);
+        } else {
             fetchData(); // Refresh
         }
     };

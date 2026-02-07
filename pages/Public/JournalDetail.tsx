@@ -161,7 +161,12 @@ const JournalDetail: React.FC = () => {
                             ? article.submitter[0]?.full_name
                             : article.submitter?.full_name || 'Unknown Author'}
                         </span>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 items-center">
+                          {!journal?.is_open_access && (
+                            <span className="flex items-center gap-1 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded">
+                              <span className="material-symbols-outlined text-sm">lock</span> Requires Access
+                            </span>
+                          )}
                           <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-primary hover:text-white transition-colors">
                             <span className="material-symbols-outlined text-sm">visibility</span> View
                           </button>

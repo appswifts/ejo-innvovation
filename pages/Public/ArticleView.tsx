@@ -18,6 +18,7 @@ interface ArticleDetail {
   journal: {
     id: string;
     title: string;
+    is_open_access: boolean;
   } | null;
 }
 
@@ -44,7 +45,7 @@ const ArticleView: React.FC = () => {
                         payment_status,
                         file_url,
                         submitter:submitter_id(full_name),
-                        journal:journal_id(id, title)
+                        journal:journal_id(id, title, is_open_access)
                     `)
           .eq('id', articleId)
           .single();
@@ -79,8 +80,62 @@ const ArticleView: React.FC = () => {
   const handleDownload = async () => {
     if (!article?.file_url) return;
 
-    // Simpler download logic - assume it's a public URL or handle signed URL if needed
-    // For now, if we stored just the path, we need to generate a signed URL
+    // Access Control Check
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Check 1: Is the journal Open Access?
+    let hasAccess = article.journal && (article.journal as any).is_open_access === true;
+
+    // Check 2: Is the current user the author?
+    if (!hasAccess && user) {
+      // Fetch the manuscript to verify submitter_id
+      const { data: manuscript } = await supabase
+        .from('manuscripts')
+        .select('submitter_id')
+        .eq('id', article.id)
+        .single();
+
+      if (manuscript?.submitter_id === user.id) {
+        hasAccess = true;
+      }
+    }
+
+    // Check 3: Has the user purchased this article?
+    if (!hasAccess && user) {
+      const { data: purchase } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', 'purchase')
+        .eq('description', `Article: ${article.id}`)
+        .eq('status', 'completed')
+        .single();
+
+      if (purchase) {
+        hasAccess = true;
+      }
+    }
+
+    // Check 4: Is the user an admin/editor (always has access)?
+    if (!hasAccess && user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role:role_id(slug)')
+        .eq('id', user.id)
+        .single();
+
+      const roleSlug = (profile?.role as any)?.slug;
+      if (roleSlug === 'super_admin' || roleSlug === 'editor' || roleSlug === 'finance_admin') {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      alert('You do not have access to download this article. Please purchase the article or subscribe to the journal.');
+      return;
+    }
+
+    // Proceed with download
     try {
       let path = article.file_url;
       // If full URL, strip it (though logic in SubmissionWizard now stores path)
