@@ -7,9 +7,9 @@
   <title>Nkiza Center for Research</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Merriweather:wght@300;400;700;900&display=swap"
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
     rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
     rel="stylesheet" />
   <script>
@@ -18,24 +18,32 @@
       theme: {
         extend: {
           colors: {
-            "primary": "#0f49bd",
-            "primary-dark": "#0a3690",
-            "orcid": "#a6ce39",
-            "background-light": "#f6f6f8",
-            "background-dark": "#101622",
+            primary: "#0F49BD", // Requested Primary Blue
+            secondary: "#8B1E1E", // Deep Red from hero background in screenshot
+            "background-light": "#F9FAFB",
+            "background-dark": "#0B1120",
+            "surface-light": "#FFFFFF",
+            "surface-dark": "#1F2937",
+            "text-light": "#111827",
+            "text-dark": "#F3F4F6",
+            "muted-light": "#6B7280",
+            "muted-dark": "#9CA3AF",
             "navy-deep": "#0a1a3b",
           },
           fontFamily: {
-            "sans": ["Inter", "sans-serif"],
-            "serif": ["Merriweather", "serif"],
-            "display": ["Inter", "sans-serif"]
+            display: ["Inter", "sans-serif"],
+            sans: ["Inter", "sans-serif"],
+            serif: ["Inter", "serif"],
           },
           borderRadius: {
-            "DEFAULT": "0.25rem",
-            "lg": "0.5rem",
-            "xl": "0.75rem",
-            "2xl": "1rem"
+            DEFAULT: "0.25rem",
+            'lg': '0.5rem',
+            'xl': '1rem',
+            '2xl': '1.5rem',
           },
+          backgroundImage: {
+            'hero-pattern': "url('https://images.unsplash.com/photo-1555679427-1f6dfcce943b?q=80&w=2073&auto=format&fit=crop')",
+          }
         },
       },
     }
@@ -43,10 +51,6 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-    }
-
-    .font-serif {
-      font-family: 'Merriweather', serif;
     }
 
     .material-symbols-outlined {

@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
-import TopNav from '../../components/TopNav';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Journal {
   id: string;
@@ -20,32 +20,21 @@ interface Book {
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, profile } = useAuth();
   const [journals, setJournals] = useState<Journal[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
-  const [heroIndex, setHeroIndex] = useState(0);
-
-  const heroImages = [
-    '/image (1).jpg',
-    '/image (2).jpg',
-    '/image (3).jpg',
-    '/image (4).jpg'
-  ];
 
   useEffect(() => {
     fetchData();
-    const timer = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
-    return () => clearInterval(timer);
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const [journalsRes, booksRes] = await Promise.all([
-        supabase.from('journals').select('id, title, discipline, cover_image_url').limit(5),
-        supabase.from('books').select('id, title, author_name, cover_url, price').limit(10)
+        supabase.from('journals').select('id, title, discipline, cover_image_url').limit(4),
+        supabase.from('books').select('id, title, author_name, cover_url, price').limit(4)
       ]);
 
       if (journalsRes.error) throw journalsRes.error;
@@ -60,309 +49,306 @@ const LandingPage: React.FC = () => {
     }
   };
 
-  const getDisciplineColor = (index: number) => {
-    const colors = ['bg-primary', 'bg-green-600', 'bg-purple-600', 'bg-amber-600', 'bg-cyan-600'];
-    return colors[index % colors.length];
-  };
-
   return (
-    <div className="flex flex-col min-h-screen">
-      <TopNav transparent />
-
-      {/* Hero Section with Slider */}
-      <section className="relative h-[700px] flex items-center justify-center overflow-hidden">
-        {heroImages.map((img, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === heroIndex ? 'opacity-100' : 'opacity-0'}`}
-          >
-            <div className="absolute inset-0 bg-black/50 z-10"></div>
-            <img
-              alt={`Slide ${idx}`}
-              className="w-full h-full object-cover scale-105 animate-slow-zoom"
-              src={img}
-            />
+    <div className="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark antialiased transition-colors duration-200 font-sans">
+      {/* Navbar */}
+      <nav className="fixed w-full z-50 bg-white/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
+              <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">Nkiza Journals</span>
+            </div>
+            <div className="hidden md:flex space-x-8">
+              <button onClick={() => navigate('/journals')} className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">Journals</button>
+              <button onClick={() => navigate('/books')} className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">Books</button>
+              <button className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">About</button>
+              <button className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">Resources</button>
+            </div>
+            <div className="flex items-center gap-4">
+              <button className="p-2 text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-white transition-colors">
+                <span className="material-icons text-xl">search</span>
+              </button>
+              {user ? (
+                <div
+                  onClick={() => navigate('/dashboard')}
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-surface-dark rounded-full border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-primary dark:hover:border-primary transition-colors"
+                >
+                  <span className="material-icons text-lg text-gray-500">account_circle</span>
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-200 max-w-[100px] truncate">{profile?.full_name || user.email}</span>
+                  <span className="material-icons text-base text-gray-400">expand_more</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate('/login')}
+                  className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-primary text-white rounded-full text-xs font-bold hover:bg-blue-700 transition-colors"
+                >
+                  Sign In
+                </button>
+              )}
+            </div>
           </div>
-        ))}
+        </div>
+      </nav>
 
-        <div className="relative z-20 max-w-5xl mx-auto px-4 text-center">
-          <div className="inline-block px-4 py-1.5 bg-primary/20 backdrop-blur-md border border-primary/30 rounded-full mb-6">
-            <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Excellence in Academic Research</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl text-white font-black mb-6 leading-tight font-serif drop-shadow-2xl">
-            Advancing Human <br /> <span className="text-primary italic">Knowledge</span>
+      {/* Hero Section */}
+      <div className="relative pt-16 bg-secondary overflow-hidden min-h-[600px] flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-900 to-red-700 opacity-90"></div>
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
+          <span className="inline-block py-1 px-3 rounded-full bg-primary/20 border border-primary/30 text-blue-100 text-xs font-semibold tracking-wider mb-6 uppercase">Excellence in Academic Research</span>
+          <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+            Advancing Human <br />
+            <span className="text-blue-400 drop-shadow-lg">Knowledge</span>
           </h1>
-          <p className="text-lg md:text-xl text-gray-200 mb-10 max-w-2xl mx-auto font-medium leading-relaxed drop-shadow-lg">
+          <p className="mt-6 text-lg md:text-xl text-red-100 max-w-2xl mx-auto font-light leading-relaxed">
             A premium multidisciplinary platform for professional journal publication, monographs, and global research dissemination.
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/dashboard/submit')}
-              className="bg-primary hover:bg-blue-600 text-white font-black py-4 px-10 rounded-2xl transition-all shadow-xl shadow-primary/20 hover:scale-105"
+              onClick={() => navigate(user ? '/dashboard/submit' : '/login')}
+              className="px-8 py-3.5 rounded-lg bg-primary hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-lg hover:shadow-blue-500/25 transform hover:-translate-y-0.5"
             >
               Submit Manuscript
             </button>
             <button
               onClick={() => navigate('/journals')}
-              className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-xl border border-white/20 font-black py-4 px-10 rounded-2xl transition-all"
+              className="px-8 py-3.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-all transform hover:-translate-y-0.5"
             >
               Explore Journals
             </button>
           </div>
         </div>
-
-        {/* Slider Indicators */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-2">
-          {heroImages.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setHeroIndex(idx)}
-              className={`h-1.5 rounded-full transition-all ${idx === heroIndex ? 'w-8 bg-primary' : 'w-2 bg-white/30'}`}
-            ></button>
-          ))}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2">
+          <div className="w-8 h-1 bg-primary rounded-full"></div>
+          <div className="w-1.5 h-1.5 bg-white/30 rounded-full"></div>
+          <div className="w-1.5 h-1.5 bg-white/30 rounded-full"></div>
         </div>
-      </section>
+      </div>
 
-      {/* Featured Books Slider Section */}
-      <section className="py-24 bg-white relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4">
+      {/* New Releases / Featured Monographs */}
+      <section className="py-20 bg-background-light dark:bg-background-dark">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-12">
             <div>
-              <span className="text-primary font-black text-xs uppercase tracking-widest mb-2 block">New Releases</span>
-              <h2 className="text-3xl md:text-4xl font-black font-serif text-slate-900 italic">Featured Monographs</h2>
+              <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-2">New Releases</h2>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white">Featured Monographs</h3>
             </div>
-            <button onClick={() => navigate('/books')} className="hidden md:flex items-center gap-2 text-slate-400 font-bold hover:text-primary transition-colors">
-              Browse Collection <span className="material-symbols-outlined">east</span>
+            <button
+              onClick={() => navigate('/books')}
+              className="hidden sm:flex items-center text-sm font-medium text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors group"
+            >
+              Browse Collection
+              <span className="material-icons text-base ml-1 transform group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </button>
           </div>
-
-          <div className="relative group">
-            <div className="flex overflow-x-auto gap-8 pb-12 no-scrollbar scroll-smooth">
-              {loading ? (
-                Array(4).fill(0).map((_, i) => (
-                  <div key={i} className="min-w-[280px] h-[400px] bg-slate-100 rounded-3xl animate-pulse"></div>
-                ))
-              ) : books.length > 0 ? (
-                books.map((book) => (
-                  <div
-                    key={book.id}
-                    onClick={() => navigate(`/books`)}
-                    className="min-w-[280px] max-w-[280px] group/book cursor-pointer"
-                  >
-                    <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden shadow-2xl mb-6 bg-slate-100 border border-slate-100">
-                      <img
-                        src={book.cover_url || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop'}
-                        className="w-full h-full object-cover group-hover/book:scale-110 transition-transform duration-700"
-                        alt={book.title}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-transparent to-transparent opacity-0 group-hover/book:opacity-100 transition-opacity p-6 flex flex-col justify-end">
-                        <button className="w-full bg-white text-slate-900 py-3 rounded-xl font-black text-xs uppercase tracking-wider mb-2">
-                          Quick View
-                        </button>
-                      </div>
-                      <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
-                        ${book.price}
-                      </div>
-                    </div>
-                    <h4 className="font-bold text-slate-900 line-clamp-1 mb-1">{book.title}</h4>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">{book.author_name}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="w-full py-20 text-center bg-slate-50 rounded-[40px] border-2 border-dashed border-slate-200">
-                  <span className="material-symbols-outlined text-4xl text-slate-200 mb-2 block">library_books</span>
-                  <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Coming Soon</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Standards Section */}
-      <section className="py-24 px-4 bg-slate-950 text-white relative">
-        <div className="absolute inset-0 bg-primary/5 mix-blend-overlay"></div>
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-            <div>
-              <span className="text-primary font-black text-xs uppercase tracking-widest mb-4 block">Our Foundation</span>
-              <h2 className="text-4xl md:text-5xl font-black mb-8 font-serif leading-tight">Upholding Academic Rigor and Excellence</h2>
-              <p className="text-slate-400 text-lg mb-12 leading-relaxed font-medium">
-                At Nkiza Center, we implement a rigorous review structure to ensure that every publication meets international quality standards.
-              </p>
-              <div className="space-y-6">
-                {[
-                  { title: 'Peer-Reviewed Quality', desc: 'Strict double-blind peer review for all submissions.' },
-                  { title: 'Global Accessibility', desc: 'Open access options for worldwide research impact.' },
-                  { title: 'Rapid Dissemination', desc: 'Streamlined workflows for faster publication times.' }
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-4 items-start">
-                    <div className="size-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1">
-                      <span className="material-symbols-outlined text-[14px] text-primary">check</span>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-100 mb-1">{item.title}</h4>
-                      <p className="text-sm text-slate-500 font-medium">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-square bg-white/5 rounded-[60px] border border-white/10 p-4">
-                <img
-                  src="/image (2).jpg"
-                  className="w-full h-full object-cover rounded-[44px] shadow-2xl brightness-75"
-                  alt="Process"
-                />
-              </div>
-              <div className="absolute -bottom-10 -left-10 bg-primary p-8 rounded-[40px] shadow-2xl hidden lg:block">
-                <div className="text-4xl font-black text-white mb-1 italic leading-none">12+</div>
-                <div className="text-[10px] font-black text-white/70 uppercase tracking-widest">Years of Excellence</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Journal Showcase */}
-      <section className="py-24 bg-slate-50 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-4">
-            <div>
-              <span className="text-primary font-black text-xs uppercase tracking-widest mb-2 block">Departments</span>
-              <h2 className="text-3xl md:text-4xl font-black font-serif text-slate-900">Academic Journals</h2>
-            </div>
-            <button onClick={() => navigate('/journals')} className="text-slate-400 font-black text-xs uppercase tracking-widest hover:text-primary flex items-center gap-2 transition-all">
-              Launch Explorer <span className="material-symbols-outlined text-sm">open_in_new</span>
-            </button>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {loading ? (
               Array(4).fill(0).map((_, i) => (
-                <div key={i} className="h-[450px] bg-slate-200 rounded-[32px] animate-pulse"></div>
+                <div key={i} className="group cursor-pointer">
+                  <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-sm bg-gray-200 dark:bg-surface-dark animate-pulse"></div>
+                </div>
+              ))
+            ) : books.length > 0 ? (
+              books.map((book) => (
+                <div key={book.id} className="group cursor-pointer" onClick={() => navigate(`/book/read/${book.id}`)}>
+                  <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <img
+                      alt={book.title}
+                      className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                      src={book.cover_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuArEDxU29cWPFV4shbv0ktfN0jxhmNuhkxP_3ObDIXjsVmPpCaEFrmC6JX3XeL-a5IfyADnBd9E1ugm0WU4NlrxN3krjobYM2Oq3OMi4SZAks-CB1rpO8NFWoyiSdIYX1KYZcBdW342V5lMzK53Zl4W9j2vTfZFYHQNehotPmvgkl4q9ryFekK555NFidGlLM5C77ddRztlVTjbsyi810n_LYFEwz0faINZRZe0CvWjl3CK5GNdgugj-HLWoM2Zg2qzfp2WZecVCd8B"}
+                    />
+                    <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow-md">${book.price}</div>
+                  </div>
+                  <div className="mt-4">
+                    <h4 className="font-bold text-gray-900 dark:text-white text-lg group-hover:text-primary transition-colors line-clamp-1">{book.title}</h4>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mt-1">{book.author_name}</p>
+                  </div>
+                </div>
+              ))
+            ) : null}
+          </div>
+          <button
+            onClick={() => navigate('/books')}
+            className="flex sm:hidden items-center text-sm font-medium text-gray-500 hover:text-primary dark:text-gray-400 mt-6 justify-center w-full"
+          >
+            Browse Collection
+            <span className="material-icons text-base ml-1">arrow_forward</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Foundation Section */}
+      <section className="py-24 bg-background-dark text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-blue-900/10 blur-3xl rounded-full transform translate-x-1/2"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-3">Our Foundation</h2>
+              <h3 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">Upholding Academic <br />Rigor and Excellence</h3>
+              <p className="text-gray-400 text-lg mb-10 leading-relaxed">
+                At Nkiza Center, we implement a rigorous review structure to ensure that every publication meets international quality standards.
+              </p>
+              <div className="space-y-8">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-primary border border-blue-800">
+                    <span className="material-icons text-xl">verified</span>
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="text-xl font-semibold text-white">Peer-Reviewed Quality</h4>
+                    <p className="mt-1 text-gray-400 text-sm">Strict double-blind peer review for all submissions.</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-primary border border-blue-800">
+                    <span className="material-icons text-xl">public</span>
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="text-xl font-semibold text-white">Global Accessibility</h4>
+                    <p className="mt-1 text-gray-400 text-sm">Open access options for worldwide research impact.</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-900/50 flex items-center justify-center text-primary border border-blue-800">
+                    <span className="material-icons text-xl">bolt</span>
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="text-xl font-semibold text-white">Rapid Dissemination</h4>
+                    <p className="mt-1 text-gray-400 text-sm">Streamlined workflows for faster publication times.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
+                <img
+                  alt="Desk with magazine and headphones representing research environment"
+                  className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-500"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhH52BpIdbY1KJ4aIyxs7oe-4pg-l5rGSVM_09Yw4C6SU5dyjY4qHnZPTrgeMPnyfzXih2E65HXQl4sI3TWFrM5cJCz4g9zDWMTz8sVrGY1Khiit1Qrj4uFzfixE1RXSg2CcnF6FAdCq-k1b2Sy5PpphLRkD7iZokES8uprQakll0AP4faeRi4HTmn1m3uJ2An6BKkyC1ppXtumog_hOhSnynZh_k8hySROJ6IMfDVuAEzZWcIxcaO6uuVtcqpPU7noetfOWCp7k-l"
+                />
+                <div className="absolute -bottom-6 -left-6 bg-primary text-white p-6 rounded-2xl shadow-xl border-4 border-background-dark">
+                  <div className="flex flex-col items-center justify-center w-24 h-24 text-center">
+                    <span className="text-4xl font-extrabold">12+</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider mt-1 leading-tight">Years of<br />Excellence</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Academic Journals Section */}
+      <section className="py-24 bg-gray-50 dark:bg-background-dark">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-2">Departments</h2>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white">Academic Journals</h3>
+            </div>
+            <button
+              onClick={() => navigate('/journals')}
+              className="flex items-center text-xs font-bold text-gray-400 hover:text-primary transition-colors tracking-widest uppercase"
+            >
+              Launch Explorer
+              <span className="material-icons text-sm ml-2">open_in_new</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {loading ? (
+              Array(4).fill(0).map((_, i) => (
+                <div key={i} className="bg-white dark:bg-surface-dark rounded-3xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 animate-pulse h-[300px]"></div>
               ))
             ) : journals.length > 0 ? (
-              journals.map((journal, i) => (
-                <div
-                  key={journal.id}
-                  onClick={() => navigate(`/journals/${journal.id}`)}
-                  className="bg-white rounded-[40px] p-6 border border-slate-200 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all group cursor-pointer"
-                >
-                  <div className="aspect-[4/5] relative rounded-[32px] overflow-hidden mb-6 bg-slate-100">
+              journals.map((journal) => (
+                <div key={journal.id} onClick={() => navigate(`/journals/${journal.id}`)} className="bg-white dark:bg-surface-dark rounded-3xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 group border border-gray-100 dark:border-gray-800 cursor-pointer">
+                  <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">
                     <img
                       alt={journal.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      src={journal.cover_image_url || `https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=800&auto=format&fit=crop`}
+                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                      src={journal.cover_image_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAyoZCZoi7kBIfs8VITvDq0lHoiOH7m5uC2UEcPPlSIqDRNKq2rF7DH3jc2ol-plu-oyo6siyjL6V-rY3PIc_9vSWiAHHhIInhIxSwyS11NmcjMKGbVrVUN139kZsU2Y-AmnEIvLZ686aAl3Oy4vomPxl9RhzQEuASVUbHoDNZ45nCrY8ZDRUJHoqG-9sV8R20fjs8nyVHvFPtBrJBm_KYhipLAdj_-0ulWUgtoLVwEIo3VblOVEtpeBYa-02ZMQ3_UseLvTZkDSZw3"}
                     />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors"></div>
+                    <div className="absolute top-3 left-3">
+                      <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">{journal.discipline || 'General'}</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col h-[140px]">
-                    <span className={`text-[9px] font-black text-white ${getDisciplineColor(i)} px-3 py-1 rounded-full uppercase self-start mb-4 tracking-wider`}>
-                      {journal.discipline || 'General'}
-                    </span>
-                    <h4 className="font-black text-slate-800 text-lg leading-tight mb-4 group-hover:text-primary transition-colors line-clamp-2">{journal.title}</h4>
-                    <div className="mt-auto flex items-center justify-between text-slate-400">
-                      <span className="text-[10px] font-black uppercase tracking-widest">Active Issue</span>
-                      <span className="material-symbols-outlined text-sm">arrow_forward_ios</span>
+                  <div className="px-2 pb-2">
+                    <h4 className="font-bold text-gray-900 dark:text-white text-lg leading-tight mb-6 min-h-[3.5rem] line-clamp-2">{journal.title}</h4>
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-700">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Active Issue</span>
+                      <span className="material-icons text-gray-300 group-hover:text-primary transition-colors text-lg">chevron_right</span>
                     </div>
                   </div>
                 </div>
               ))
-            ) : (
-              <div className="col-span-full text-center py-20 bg-white rounded-[40px] border border-slate-100">
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Inventory Synchronizing...</p>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-white pt-24 pb-12 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-primary/5 -skew-x-12 translate-x-1/2"></div>
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-16 mb-20">
-            <div className="md:col-span-4">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="size-10 bg-primary rounded-xl flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-xl font-black italic">N</span>
-                </div>
-                <h5 className="font-serif font-black text-2xl italic tracking-tighter">Nkiza Center</h5>
+      <footer className="bg-gray-900 text-white pt-20 pb-10 border-t border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+            <div className="lg:col-span-1">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
+                <span className="font-bold text-xl tracking-tight">Nkiza Center</span>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed mb-10 font-medium">
+              <p className="text-gray-400 text-sm leading-relaxed mb-8">
                 Nkiza Academic Publishing specializes in multidisciplinary research dissemination, providing a robust platform for authors to share findings with a global community of scholars.
               </p>
               <div className="flex gap-4">
-                {['facebook', 'twitter', 'linkedin'].map(soc => (
-                  <div key={soc} className="size-10 rounded-full border border-white/10 flex items-center justify-center text-slate-400 hover:bg-primary hover:text-white transition-all cursor-pointer">
-                    <span className="material-symbols-outlined text-[18px]">{soc}</span>
-                  </div>
-                ))}
+                <a className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all" href="#">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path></svg>
+                </a>
+                <a className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:bg-primary hover:text-white transition-all" href="#">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"></path></svg>
+                </a>
               </div>
             </div>
-
-            <div className="md:col-span-2 md:col-start-6">
-              <h6 className="font-black text-[11px] uppercase tracking-[0.2em] mb-8 text-primary">Library</h6>
-              <ul className="space-y-4 text-xs font-bold text-slate-400">
-                <li><a className="hover:text-white transition-colors" href="#">Journals</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">Monographs</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">Digital Archives</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">New Releases</a></li>
+            <div>
+              <h4 className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-6">Library</h4>
+              <ul className="space-y-4 text-sm text-gray-400">
+                <li><button onClick={() => navigate('/journals')} className="hover:text-white transition-colors">Journals</button></li>
+                <li><button onClick={() => navigate('/books')} className="hover:text-white transition-colors">Monographs</button></li>
+                <li><button className="hover:text-white transition-colors">Digital Archives</button></li>
+                <li><button className="hover:text-white transition-colors">New Releases</button></li>
               </ul>
             </div>
-
-            <div className="md:col-span-2">
-              <h6 className="font-black text-[11px] uppercase tracking-[0.2em] mb-8 text-primary">Authors</h6>
-              <ul className="space-y-4 text-xs font-bold text-slate-400">
-                <li><a className="hover:text-white transition-colors" href="#">Submission Portal</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">Editorial Policies</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">APC Information</a></li>
-                <li><a className="hover:text-white transition-colors" href="#">Author Resources</a></li>
+            <div>
+              <h4 className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-6">Authors</h4>
+              <ul className="space-y-4 text-sm text-gray-400">
+                <li><button onClick={() => navigate('/dashboard/submit')} className="hover:text-white transition-colors">Submission Portal</button></li>
+                <li><button className="hover:text-white transition-colors">Editorial Policies</button></li>
+                <li><button className="hover:text-white transition-colors">APC Information</button></li>
+                <li><button className="hover:text-white transition-colors">Author Resources</button></li>
               </ul>
             </div>
-
-            <div className="md:col-span-3">
-              <h6 className="font-black text-[11px] uppercase tracking-[0.2em] mb-8 text-primary">Newsletter</h6>
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-6">Receive latest research alerts.</p>
-              <div className="flex gap-2">
-                <input
-                  type="email"
-                  placeholder="Email address"
-                  className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs flex-1 focus:outline-none focus:border-primary transition-colors"
-                />
-                <button className="bg-primary hover:bg-blue-600 p-3 rounded-xl transition-all">
-                  <span className="material-symbols-outlined text-white text-[20px]">send</span>
+            <div>
+              <h4 className="text-xs font-bold text-blue-500 uppercase tracking-wider mb-6">Newsletter</h4>
+              <p className="text-xs text-gray-400 mb-4 uppercase tracking-wide">Receive latest research alerts.</p>
+              <form className="flex gap-2">
+                <div className="relative flex-grow">
+                  <input className="w-full bg-gray-800 text-white text-sm border border-gray-700 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent placeholder-gray-600" placeholder="Email address" type="email" />
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 material-icons text-base">more_horiz</span>
+                </div>
+                <button className="bg-primary hover:bg-blue-600 text-white rounded-lg px-3 py-2 transition-colors flex items-center justify-center">
+                  <span className="material-icons text-lg">send</span>
                 </button>
-              </div>
+              </form>
             </div>
           </div>
-
-          <div className="pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600">
-            <p>© 2026 NKIZA CENTER FOR RESEARCH. ALL RIGHTS RESERVED.</p>
-            <div className="flex gap-8">
-              <a className="hover:text-primary transition-colors" href="#">Privacy</a>
-              <a className="hover:text-primary transition-colors" href="#">Terms</a>
-              <a className="hover:text-primary transition-colors" href="#">Cookies</a>
+          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
+            <p>© 2026 Nkiza Center for Research. All rights reserved.</p>
+            <div className="flex gap-6 mt-4 md:mt-0 uppercase tracking-wider">
+              <button className="hover:text-white transition-colors">Privacy</button>
+              <button className="hover:text-white transition-colors">Terms</button>
+              <button className="hover:text-white transition-colors">Cookies</button>
             </div>
           </div>
         </div>
       </footer>
-
-      {/* CSS for custom scrollbar and animations */}
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        @keyframes slow-zoom {
-          0% { transform: scale(1); }
-          100% { transform: scale(1.1); }
-        }
-        .animate-slow-zoom {
-          animation: slow-zoom 20s infinite alternate linear;
-        }
-      `}</style>
     </div>
   );
 };
