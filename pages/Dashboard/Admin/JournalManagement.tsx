@@ -24,6 +24,7 @@ const JournalManagement: React.FC = () => {
         editor_in_chief_name: '',
         impact_factor: '',
         is_open_access: true,
+        guidelines: '', // Add guidelines to form state
     });
 
     useEffect(() => {
@@ -68,6 +69,7 @@ const JournalManagement: React.FC = () => {
             editor_in_chief_name: journal.editor_in_chief_name || '',
             impact_factor: journal.impact_factor ? journal.impact_factor.toString() : '',
             is_open_access: journal.is_open_access,
+            guidelines: journal.guidelines || '',
         });
         setIsModalOpen(true);
     };
@@ -86,6 +88,7 @@ const JournalManagement: React.FC = () => {
             editor_in_chief_name: '',
             impact_factor: '',
             is_open_access: true,
+            guidelines: '',
         });
     };
 
@@ -147,6 +150,7 @@ const JournalManagement: React.FC = () => {
                             editor_in_chief_name: '',
                             impact_factor: '',
                             is_open_access: true,
+                            guidelines: '',
                         });
                         setIsModalOpen(true);
                     }}
@@ -269,14 +273,14 @@ const JournalManagement: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Editor in Chief</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Editor Team</label>
                             <input
                                 name="editor_in_chief_name"
                                 type="text"
                                 value={formData.editor_in_chief_name}
                                 onChange={handleChange}
                                 className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                placeholder="Name of the Editor in Chief"
+                                placeholder="Name of the Editor Team"
                             />
                         </div>
 
@@ -313,6 +317,18 @@ const JournalManagement: React.FC = () => {
                                 onChange={handleChange}
                                 className="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                                 placeholder="Detailed aims and scope..."
+                            />
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Submission Guidelines</label>
+                            <textarea
+                                name="guidelines"
+                                rows={5}
+                                value={formData.guidelines}
+                                onChange={handleChange}
+                                className="w-full p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                                placeholder="Instructions for authors..."
                             />
                         </div>
 

@@ -23,6 +23,7 @@ const JournalDetail: React.FC = () => {
   const [journal, setJournal] = useState<Journal | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'about' | 'guideline' | 'aims'>('about');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -114,16 +115,83 @@ const JournalDetail: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8 space-y-12">
             <section>
-              <h3 className="text-2xl font-bold font-serif mb-4 border-l-4 border-primary pl-4 text-slate-900">About this Journal</h3>
-              <div className="prose max-w-none text-slate-600 leading-relaxed space-y-4">
-                <p className="whitespace-pre-line">{journal.description}</p>
-                {journal.aims_scope && (
-                  <>
-                    <h4 className="font-bold text-lg text-slate-800">Aims & Scope</h4>
-                    <p className="whitespace-pre-line">{journal.aims_scope}</p>
-                  </>
-                )}
+              <div className="flex items-center gap-8 border-b border-slate-200 mb-8">
+                <button
+                  onClick={() => setActiveTab('about')}
+                  className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all relative ${activeTab === 'about'
+                    ? 'text-primary'
+                    : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                >
+                  About Journal
+                  {activeTab === 'about' && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('aims')}
+                  className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all relative ${activeTab === 'aims'
+                    ? 'text-primary'
+                    : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                >
+                  Aims & Scope
+                  {activeTab === 'aims' && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setActiveTab('guideline')}
+                  className={`pb-4 text-sm font-bold uppercase tracking-wider transition-all relative ${activeTab === 'guideline'
+                    ? 'text-primary'
+                    : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                >
+                  Submission Guidelines
+                  {activeTab === 'guideline' && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded-t-full"></span>
+                  )}
+                </button>
               </div>
+
+              {activeTab === 'about' && (
+                <div className="prose max-w-none text-slate-600 leading-relaxed space-y-8 animate-in fade-in duration-300">
+                  <div>
+                    <h3 className="text-xl font-bold font-serif mb-4 text-slate-900">About this Journal</h3>
+                    <p className="whitespace-pre-line">{journal.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'aims' && (
+                <div className="prose max-w-none text-slate-600 leading-relaxed animate-in fade-in duration-300">
+                  <h3 className="text-xl font-bold font-serif mb-4 text-slate-900">Aims & Scope</h3>
+                  {journal.aims_scope ? (
+                    <div className="whitespace-pre-line">
+                      {journal.aims_scope}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                      <p className="text-slate-500 italic">No aims and scope defined yet.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'guideline' && (
+                <div className="prose max-w-none text-slate-600 leading-relaxed animate-in fade-in duration-300">
+                  <h3 className="text-xl font-bold font-serif mb-4 text-slate-900">Author Guidelines</h3>
+                  {journal.guidelines ? (
+                    <div className="whitespace-pre-line bg-slate-50 p-6 rounded-xl border border-slate-100">
+                      {journal.guidelines}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                      <p className="text-slate-500 italic">No specific guidelines have been published for this journal yet.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
 
             <section>
@@ -195,14 +263,14 @@ const JournalDetail: React.FC = () => {
               </div>
 
               <div className="bg-primary/5 rounded-2xl p-8 border border-primary/20">
-                <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editor-in-Chief</h3>
+                <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editor Team</h3>
                 <div className="flex gap-4 items-center mb-4">
                   {/* <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md">
                                         <img alt={journal.editor_in_chief_name || 'Editor'} className="w-full h-full object-cover" src="https://via.placeholder.com/150" />
                                     </div> */}
                   <div>
                     <h4 className="font-bold text-slate-900">{journal.editor_in_chief_name || 'Not Assigned'}</h4>
-                    <p className="text-primary font-semibold text-xs">Editor-in-Chief</p>
+                    <p className="text-primary font-semibold text-xs">Editor Team</p>
                   </div>
                 </div>
                 <p className="text-slate-600 text-sm leading-relaxed">

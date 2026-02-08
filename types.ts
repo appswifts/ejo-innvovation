@@ -31,9 +31,11 @@ export interface Journal {
   aims_scope: string;
   cover_image_url: string;
   discipline: string;
-  editor_in_chief_name: string;
+  editor_in_chief_name?: string;
   impact_factor: number;
   is_open_access: boolean;
+  created_at: string;
+  guidelines?: string;
 }
 
 export interface Article {

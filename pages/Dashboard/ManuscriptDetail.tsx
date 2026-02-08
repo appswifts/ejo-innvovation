@@ -45,6 +45,15 @@ const ManuscriptDetailPage: React.FC = () => {
     const [newComment, setNewComment] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
     const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editForm, setEditForm] = useState({
+        title: '',
+        abstract: '',
+        cover_letter: ''
+    });
+    const [newFile, setNewFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const isEditor = profile?.role?.slug === 'super_admin' || profile?.role?.slug === 'editor';
 
@@ -138,6 +147,83 @@ const ManuscriptDetailPage: React.FC = () => {
             alert('Failed to update status.');
         } finally {
             setUpdatingStatus(false);
+        }
+    };
+
+    const handleUpdateManuscript = async () => {
+        if (!manuscript || !id) return;
+
+        try {
+            setUpdatingStatus(true);
+            let fileUrl = manuscript.file_url;
+
+            if (newFile) {
+                setUploading(true);
+                const fileExt = newFile.name.split('.').pop();
+                const fileName = `${manuscript.id}/${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('manuscripts')
+                    .upload(filePath, newFile);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('manuscripts')
+                    .getPublicUrl(filePath);
+
+                fileUrl = publicUrl;
+                setUploading(false);
+            }
+
+            const { error } = await supabase
+                .from('manuscripts')
+                .update({
+                    title: editForm.title,
+                    abstract: editForm.abstract,
+                    cover_letter: editForm.cover_letter,
+                    file_url: fileUrl,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', manuscript.id);
+
+            if (error) throw error;
+
+            setManuscript({
+                ...manuscript,
+                title: editForm.title,
+                abstract: editForm.abstract,
+                cover_letter: editForm.cover_letter,
+                file_url: fileUrl
+            });
+
+            setIsEditing(false);
+            setNewFile(null);
+            alert('Manuscript updated successfully.');
+
+        } catch (error: any) {
+            console.error('Error updating manuscript:', error);
+            alert('Failed to update manuscript: ' + error.message);
+        } finally {
+            setUpdatingStatus(false);
+            setUploading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (manuscript) {
+            setEditForm({
+                title: manuscript.title || '',
+                abstract: manuscript.abstract || '',
+                cover_letter: manuscript.cover_letter || ''
+            });
+        }
+    }, [manuscript]);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setNewFile(e.target.files[0]);
         }
     };
 
@@ -297,7 +383,33 @@ const ManuscriptDetailPage: React.FC = () => {
                 <section className="flex-1 bg-slate-100 p-8 overflow-y-auto">
                     <div className="max-w-3xl mx-auto bg-white shadow-sm border border-slate-200 min-h-screen p-12 rounded-xl">
                         <div className="mb-12">
-                            <h1 className="text-3xl font-bold text-slate-900 mb-6">{manuscript.title}</h1>
+                            <div className="flex justify-between items-start mb-6">
+                                {isEditing ? (
+                                    <div className="w-full space-y-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Title</label>
+                                            <input
+                                                type="text"
+                                                value={editForm.title}
+                                                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                                className="w-full text-2xl font-bold text-slate-900 border-b-2 border-primary/20 focus:border-primary outline-none py-2 bg-transparent transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <h1 className="text-3xl font-bold text-slate-900 flex-1">{manuscript.title}</h1>
+                                )}
+
+                                {isEditor && !isEditing && (
+                                    <button
+                                        onClick={() => setIsEditing(true)}
+                                        className="ml-4 p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                                        title="Edit Manuscript Details"
+                                    >
+                                        <span className="material-symbols-outlined">edit</span>
+                                    </button>
+                                )}
+                            </div>
 
                             <div className="flex items-center gap-6 text-sm text-slate-500 mb-8 border-y border-slate-100 py-4">
                                 <div>
@@ -318,15 +430,33 @@ const ManuscriptDetailPage: React.FC = () => {
 
                             <section className="mb-10">
                                 <h2 className="text-sm font-bold text-primary uppercase tracking-widest mb-4 border-b border-primary/10 pb-2">Abstract</h2>
-                                <p className="text-slate-700 leading-relaxed text-justify whitespace-pre-wrap">
-                                    {manuscript.abstract || 'No abstract provided.'}
-                                </p>
+                                {isEditing ? (
+                                    <textarea
+                                        value={editForm.abstract}
+                                        onChange={(e) => setEditForm({ ...editForm, abstract: e.target.value })}
+                                        className="w-full h-48 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-700 leading-relaxed resize-none"
+                                        placeholder="Enter manuscript abstract..."
+                                    />
+                                ) : (
+                                    <p className="text-slate-700 leading-relaxed text-justify whitespace-pre-wrap">
+                                        {manuscript.abstract || 'No abstract provided.'}
+                                    </p>
+                                )}
                             </section>
 
-                            {manuscript.cover_letter && (
+                            {(manuscript.cover_letter || isEditing) && (
                                 <section className="mb-10">
                                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Cover Letter</h2>
-                                    <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{manuscript.cover_letter}</p>
+                                    {isEditing ? (
+                                        <textarea
+                                            value={editForm.cover_letter}
+                                            onChange={(e) => setEditForm({ ...editForm, cover_letter: e.target.value })}
+                                            className="w-full h-48 p-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all outline-none text-slate-600 leading-relaxed resize-none"
+                                            placeholder="Enter cover letter..."
+                                        />
+                                    ) : (
+                                        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{manuscript.cover_letter}</p>
+                                    )}
                                 </section>
                             )}
 
@@ -337,18 +467,81 @@ const ManuscriptDetailPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm font-bold text-slate-900">Manuscript File</p>
-                                        <p className="text-xs text-slate-500">PDF Document</p>
+                                        <p className="text-xs text-slate-500">
+                                            {isEditing && newFile ? newFile.name : 'PDF Document'}
+                                        </p>
                                     </div>
                                 </div>
-                                {manuscript.file_url ? (
-                                    <button onClick={handleDownload} disabled={downloading} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all shadow-md shadow-primary/20 disabled:opacity-50">
-                                        <span className="material-symbols-outlined text-[18px]">{downloading ? 'hourglass_empty' : 'download'}</span>
-                                        {downloading ? 'Downloading...' : 'Download Full File'}
-                                    </button>
+
+                                {isEditing ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileChange}
+                                            accept=".pdf,.doc,.docx"
+                                            className="hidden"
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-300 transition-all"
+                                        >
+                                            {newFile ? 'Change File' : 'Replace File'}
+                                        </button>
+                                        {newFile && (
+                                            <button
+                                                onClick={() => {
+                                                    setNewFile(null);
+                                                    if (fileInputRef.current) fileInputRef.current.value = '';
+                                                }}
+                                                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                                title="Remove selected file"
+                                            >
+                                                <span className="material-symbols-outlined">close</span>
+                                            </button>
+                                        )}
+                                    </div>
                                 ) : (
-                                    <span className="text-xs text-slate-400 italic">No file attached</span>
+                                    manuscript.file_url ? (
+                                        <button onClick={handleDownload} disabled={downloading} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all shadow-md shadow-primary/20 disabled:opacity-50">
+                                            <span className="material-symbols-outlined text-[18px]">{downloading ? 'hourglass_empty' : 'download'}</span>
+                                            {downloading ? 'Downloading...' : 'Download Full File'}
+                                        </button>
+                                    ) : (
+                                        <span className="text-xs text-slate-400 italic">No file attached</span>
+                                    )
                                 )}
                             </div>
+
+                            {isEditing && (
+                                <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-slate-100">
+                                    <button
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setNewFile(null);
+                                            setEditForm({
+                                                title: manuscript.title || '',
+                                                abstract: manuscript.abstract || '',
+                                                cover_letter: manuscript.cover_letter || ''
+                                            });
+                                        }}
+                                        disabled={uploading || updatingStatus}
+                                        className="px-6 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-lg transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUpdateManuscript}
+                                        disabled={uploading || updatingStatus}
+                                        className="px-6 py-2.5 bg-primary text-white font-bold text-sm rounded-lg hover:bg-primary-dark shadow-lg shadow-primary/20 disabled:opacity-50 flex items-center gap-2 transition-all"
+                                    >
+                                        {(uploading || updatingStatus) && (
+                                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                        )}
+                                        {uploading ? 'Uploading...' : updatingStatus ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
