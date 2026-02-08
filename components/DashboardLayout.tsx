@@ -13,19 +13,27 @@ const DashboardLayout: React.FC = () => {
 
     // Define menu items based on roles
     const getMenuItems = () => {
+        const roleSlug = profile.role?.slug || 'reader';
+
         const items = [
-            { label: 'Overview', icon: 'dashboard', path: '/dashboard/overview', roles: ['author', 'editor', 'reviewer', 'finance_admin', 'super_admin'] },
+            // General Access (Everyone)
+            { label: 'Overview', icon: 'dashboard', path: '/dashboard/overview', roles: ['author', 'editor', 'reviewer', 'finance_admin', 'super_admin', 'reader', 'book_seller', 'author_bookseller'] },
+
+            // Reader / Applicant
+            { label: 'Applications', icon: 'assignment', path: '/dashboard/applications', roles: ['reader'] },
+            { label: 'Become an Author', icon: 'edit_note', path: '/dashboard/applications/new', roles: ['reader'] },
 
             // Author
-            { label: 'My Manuscripts', icon: 'description', path: '/dashboard/my-manuscripts', roles: ['author'] },
-            { label: 'New Submission', icon: 'add_circle', path: '/dashboard/submit', roles: ['author'] },
+            { label: 'My Manuscripts', icon: 'description', path: '/dashboard/my-manuscripts', roles: ['author', 'author_bookseller'] },
+            { label: 'New Submission', icon: 'add_circle', path: '/dashboard/submit', roles: ['author', 'author_bookseller'] },
 
-            // Editor
+            // Book Seller
+            { label: 'My Books', icon: 'library_books', path: '/dashboard/books', roles: ['book_seller', 'author_bookseller'] },
+
+            // Editor / Super Admin
             { label: 'All Submissions', icon: 'inventory_2', path: '/dashboard/submissions', roles: ['editor', 'super_admin'] },
-            { label: 'Books', icon: 'menu_book', path: '/dashboard/admin/books', roles: ['editor', 'super_admin'] },
-
-            // Reviewer
-            // { label: 'My Reviews', icon: 'rate_review', path: '/dashboard/reviews', roles: ['reviewer'] },
+            { label: 'Manage Books', icon: 'menu_book', path: '/dashboard/admin/books', roles: ['editor', 'super_admin'] },
+            { label: 'Applications', icon: 'approval', path: '/dashboard/admin/applications', roles: ['editor', 'super_admin'] },
 
             // Finance
             { label: 'Financials', icon: 'payments', path: '/dashboard/finance', roles: ['finance_admin', 'super_admin'] },
@@ -37,8 +45,8 @@ const DashboardLayout: React.FC = () => {
         ];
 
         return items.filter(item => {
-            if (profile.role?.slug === 'super_admin') return true;
-            return profile.role?.slug && item.roles.includes(profile.role.slug);
+            if (roleSlug === 'super_admin') return true;
+            return item.roles.includes(roleSlug);
         });
     };
 
@@ -54,7 +62,7 @@ const DashboardLayout: React.FC = () => {
         <div className="flex h-screen bg-slate-50 overflow-hidden">
             {/* Sidebar Overlay for mobile */}
             {!sidebarOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/50 z-20 lg:hidden"
                     onClick={() => setSidebarOpen(true)}
                 ></div>
@@ -116,7 +124,7 @@ const DashboardLayout: React.FC = () => {
             <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 font-sans">
                 {/* Mobile Header */}
                 <header className="h-16 flex items-center px-4 bg-white border-b border-slate-200 lg:hidden shrink-0">
-                    <button 
+                    <button
                         onClick={() => setSidebarOpen(false)}
                         className="p-2 -ml-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
                     >

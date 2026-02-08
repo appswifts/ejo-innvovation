@@ -41,6 +41,7 @@ const BooksPage: React.FC = () => {
       const { data, error } = await supabase
         .from('books')
         .select('*')
+        .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

@@ -5,7 +5,7 @@ import { UserProfile } from '../../../types';
 
 const UserManagement: React.FC = () => {
     const [users, setUsers] = useState<UserProfile[]>([]);
-    const [roles, setRoles] = useState<{ id: string, slug: string }[]>([]);
+    const [roles, setRoles] = useState<{ id: string, slug: string, name: string }[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -16,7 +16,7 @@ const UserManagement: React.FC = () => {
         setLoading(true);
         const [usersRes, rolesRes] = await Promise.all([
             supabase.from('profiles').select('*, role:role_id(*)'),
-            supabase.from('roles').select('id, slug')
+            supabase.from('roles').select('id, slug, name').order('name')
         ]);
 
         if (usersRes.data) setUsers(usersRes.data as UserProfile[]);
@@ -100,11 +100,11 @@ const UserManagement: React.FC = () => {
                                             onChange={(e) => updateUserRole(user.id, e.target.value)}
                                             className="bg-slate-100 border-none rounded-md text-xs font-bold uppercase tracking-wider text-slate-700 p-2 cursor-pointer focus:ring-2 focus:ring-primary"
                                         >
-                                            <option value="author">Author</option>
-                                            <option value="reviewer">Reviewer</option>
-                                            <option value="editor">Editor</option>
-                                            <option value="finance_admin">Finance</option>
-                                            <option value="super_admin">Super Admin</option>
+                                            {roles.map(role => (
+                                                <option key={role.id} value={role.slug}>
+                                                    {role.name}
+                                                </option>
+                                            ))}
                                         </select>
                                     </td>
                                     <td className="px-6 py-4">

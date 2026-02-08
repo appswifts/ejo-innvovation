@@ -34,6 +34,7 @@ export interface Journal {
   editor_in_chief_name?: string;
   impact_factor: number;
   is_open_access: boolean;
+  subscription_package_id?: string | null;
   created_at: string;
   guidelines?: string;
 }
@@ -85,4 +86,6 @@ export interface Manuscript {
   status: ManuscriptStatus;
   submission_date: string;
   updated_at: string;
+  price?: number;
+  currency?: string;
 }

@@ -3,6 +3,7 @@ import { ViewState } from '../../types';
 import TopNav from '../../components/TopNav';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ArticleDetail {
   id: string;
@@ -12,21 +13,28 @@ interface ArticleDetail {
   status: string;
   payment_status: string;
   file_url: string | null;
+  price: number;
+  currency: string;
   submitter: {
+    id: string;
     full_name: string;
-  } | { full_name: string }[] | null;
+  } | { id: string; full_name: string }[] | null;
   journal: {
     id: string;
     title: string;
     is_open_access: boolean;
+    subscription_package_id: string | null;
   } | null;
 }
 
 const ArticleView: React.FC = () => {
   const navigate = useNavigate();
   const { id: articleId } = useParams<{ id: string }>();
+  const { user, profile } = useAuth();
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -44,8 +52,10 @@ const ArticleView: React.FC = () => {
                         status, 
                         payment_status,
                         file_url,
-                        submitter:submitter_id(full_name),
-                        journal:journal_id(id, title, is_open_access)
+                        price,
+                        currency,
+                        submitter:submitter_id(id, full_name),
+                        journal:journal_id(id, title, is_open_access, subscription_package_id)
                     `)
           .eq('id', articleId)
           .single();
@@ -53,20 +63,6 @@ const ArticleView: React.FC = () => {
         if (error) throw error;
         // @ts-ignore - Supabase types join fix
         setArticle(data);
-
-        // Security Check: If not published AND (not accepted+paid), maybe hidden?
-        // But for now, let's just allow viewing logic, but the list page is filtered.
-        // Or redirect if status is restricted?
-        const isVisible = data.status === 'published' || (data.status === 'accepted' && data.payment_status === 'paid');
-
-        // If user is the author or admin, they might still want to see it? 
-        // For public view, we enforce this.
-        // Assuming this page is public facing.
-        // We'll trust the list filtering primarily, but here is a simple check:
-        if (!isVisible) {
-          // Optional: You could redirect or show a "Content not available" message.
-          // For now, keeping it open to verify the updated data structure, but filtering on JournalDetail is key.
-        }
       } catch (err) {
         console.error("Error fetching article", err);
       } finally {
@@ -77,68 +73,92 @@ const ArticleView: React.FC = () => {
     fetchArticle();
   }, [articleId]);
 
-  const handleDownload = async () => {
-    if (!article?.file_url) return;
+  useEffect(() => {
+    checkAccess();
+  }, [article, user]);
 
-    // Access Control Check
-    const { data: { user } } = await supabase.auth.getUser();
+  const checkAccess = async () => {
+    if (!article) return;
+    setCheckingAccess(true);
 
-    // Check 1: Is the journal Open Access?
-    let hasAccess = article.journal && (article.journal as any).is_open_access === true;
-
-    // Check 2: Is the current user the author?
-    if (!hasAccess && user) {
-      // Fetch the manuscript to verify submitter_id
-      const { data: manuscript } = await supabase
-        .from('manuscripts')
-        .select('submitter_id')
-        .eq('id', article.id)
-        .single();
-
-      if (manuscript?.submitter_id === user.id) {
-        hasAccess = true;
-      }
-    }
-
-    // Check 3: Has the user purchased this article?
-    if (!hasAccess && user) {
-      const { data: purchase } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('type', 'purchase')
-        .eq('description', `Article: ${article.id}`)
-        .eq('status', 'completed')
-        .single();
-
-      if (purchase) {
-        hasAccess = true;
-      }
-    }
-
-    // Check 4: Is the user an admin/editor (always has access)?
-    if (!hasAccess && user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role:role_id(slug)')
-        .eq('id', user.id)
-        .single();
-
-      const roleSlug = (profile?.role as any)?.slug;
-      if (roleSlug === 'super_admin' || roleSlug === 'editor' || roleSlug === 'finance_admin') {
-        hasAccess = true;
-      }
-    }
-
-    if (!hasAccess) {
-      alert('You do not have access to download this article. Please purchase the article or subscribe to the journal.');
+    // 1. Open Access
+    if (article.journal?.is_open_access) {
+      setHasAccess(true);
+      setCheckingAccess(false);
       return;
     }
 
-    // Proceed with download
+    if (!user) {
+      setHasAccess(false);
+      setCheckingAccess(false);
+      return;
+    }
+
+    // 2. Author
+    const submitterId = Array.isArray(article.submitter) ? article.submitter[0]?.id : (article.submitter as any)?.id;
+    if (user.id === submitterId) {
+      setHasAccess(true);
+      setCheckingAccess(false);
+      return;
+    }
+
+    // 3. Admin/Editor Bypass
+    const roleSlug = profile?.role?.slug;
+    if (['super_admin', 'editor', 'finance_admin'].includes(roleSlug || '')) {
+      setHasAccess(true);
+      setCheckingAccess(false);
+      return;
+    }
+
+    // 3.5 Journal Subscription
+    if (user && article.journal?.subscription_package_id) {
+      const { data: sub } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('package_id', article.journal.subscription_package_id)
+        .eq('status', 'completed')
+        .maybeSingle();
+
+      if (sub) {
+        setHasAccess(true);
+        setCheckingAccess(false);
+        return;
+      }
+    }
+
+    // 4. Purchased
+    const { data: purchase } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', 'purchase') // Assuming 'purchase' type for articles as well, or we can use 'article_purchase'
+      .eq('manuscript_id', article.id) // Correct column for article purchase
+      .eq('status', 'completed')
+      .maybeSingle();
+
+    if (purchase) {
+      setHasAccess(true);
+    } else {
+      setHasAccess(false);
+    }
+    setCheckingAccess(false);
+  };
+
+  const handleDownload = async () => {
+    if (!hasAccess) {
+      // Should not happen if UI is correct, but safe guard
+      alert("Please purchase this article to download.");
+      return;
+    }
+
+    if (!article?.file_url) {
+      alert("File not available.");
+      return;
+    }
+
     try {
       let path = article.file_url;
-      // If full URL, strip it (though logic in SubmissionWizard now stores path)
       if (path.includes('supabase.co')) {
         const match = path.match(/\/manuscripts\/(.+)$/);
         if (match) path = match[1];
@@ -146,7 +166,7 @@ const ArticleView: React.FC = () => {
 
       const { data, error } = await supabase.storage
         .from('manuscripts')
-        .createSignedUrl(path, 60); // 1 minute expiry
+        .createSignedUrl(path, 60);
 
       if (error) throw error;
 
@@ -157,11 +177,22 @@ const ArticleView: React.FC = () => {
     }
   };
 
+  const handlePurchase = () => {
+    if (!user) {
+      const currentUrl = encodeURIComponent(`/checkout?type=article&id=${article?.id}`);
+      navigate(`/login?redirect=${currentUrl}`);
+      return;
+    }
+    navigate(`/checkout?type=article&id=${article?.id}`);
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
   if (!article) return <div className="p-10 text-center">Article not found</div>;
+
+  const isPaidJournal = !article.journal?.is_open_access;
 
   return (
     <div className="min-h-screen bg-background-light font-display">
@@ -191,22 +222,25 @@ const ArticleView: React.FC = () => {
               <span className="text-primary font-medium text-lg">
                 {Array.isArray(article.submitter)
                   ? article.submitter[0]?.full_name
-                  : article.submitter?.full_name || 'Unknown Author'}
+                  : (article.submitter as any)?.full_name || 'Unknown Author'}
               </span>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
               <span className="material-symbols-outlined text-lg">calendar_today</span>
               <span className="text-sm">Published {new Date(article.submission_date).toLocaleDateString()}</span>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1.5 bg-slate-200/50 rounded-lg text-slate-700 text-sm font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">visibility</span> 0 Views
-            </span>
-            <span className={`ml-auto px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${article.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-              }`}>
-              {article.status.replace('_', ' ')}
-            </span>
+            {/* Badge for Access Type */}
+            {isPaidJournal ? (
+              <span className="flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                <span className="material-symbols-outlined text-sm">lock</span>
+                Premium Access
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+                <span className="material-symbols-outlined text-sm">lock_open</span>
+                Open Access
+              </span>
+            )}
           </div>
         </div>
 
@@ -219,32 +253,55 @@ const ArticleView: React.FC = () => {
               </p>
             </section>
 
-            <div className="border-b border-slate-200 mb-8">
-              <div className="flex gap-8">
-                <button className="pb-4 text-sm font-bold text-primary border-b-2 border-primary">PDF Preview</button>
-              </div>
-            </div>
+            {/* Access Control Section */}
+            <div className="relative rounded-xl border border-slate-200 bg-white shadow-xl min-h-[300px] flex flex-col items-center justify-center p-8 overflow-hidden">
 
-            {/* PDF View / Access Control */}
-            <div className="relative rounded-xl border border-slate-200 bg-white shadow-xl min-h-[400px] flex flex-col items-center justify-center p-8">
-              {/* Simplified view: Just a download button for now. 
-                                 A real PDF viewer would go here. */}
-              <div className="text-center">
-                <div className="size-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <span className="material-symbols-outlined text-4xl text-slate-400">picture_as_pdf</span>
+              {checkingAccess ? (
+                <div className="animate-pulse flex flex-col items-center">
+                  <div className="h-4 w-32 bg-slate-200 rounded mb-4"></div>
+                  <div className="h-10 w-48 bg-slate-200 rounded"></div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Read Full Article</h3>
-                <p className="text-slate-500 mb-6 max-w-md">
-                  Download the full PDF to read the complete research paper.
-                </p>
-                <button
-                  onClick={handleDownload}
-                  className="bg-primary text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 mx-auto"
-                >
-                  <span className="material-symbols-outlined">download</span>
-                  Download PDF
-                </button>
-              </div>
+              ) : hasAccess ? (
+                <div className="text-center z-10">
+                  <div className="size-20 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span className="material-symbols-outlined text-4xl">check_circle</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Full Text Available</h3>
+                  <p className="text-slate-500 mb-6 max-w-md">
+                    You have access to this article.
+                  </p>
+                  <button
+                    onClick={handleDownload}
+                    className="bg-primary text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 mx-auto shadow-lg hover:shadow-primary/30"
+                  >
+                    <span className="material-symbols-outlined">download</span>
+                    Download PDF
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center z-10 relative">
+                  {/* Blurred background effect behind content if we had partial preview, but here we just show lock */}
+                  <div className="size-20 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-amber-100">
+                    <span className="material-symbols-outlined text-4xl">lock</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Restricted Access</h3>
+                  <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                    This article is published in a premium journal. Purchase access to view and download the full text.
+                  </p>
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="text-3xl font-black text-slate-900">
+                      {article.currency || 'USD'} {(article.price || 0).toFixed(2)}
+                    </div>
+                    <button
+                      onClick={handlePurchase}
+                      className="bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-blue-700 transition flex items-center gap-2 mx-auto shadow-xl hover:shadow-primary/30 transform hover:-translate-y-0.5"
+                    >
+                      <span className="material-symbols-outlined">shopping_cart</span>
+                      Purchase Access
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

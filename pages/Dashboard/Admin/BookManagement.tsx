@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface Book {
     id: string;
@@ -13,9 +15,13 @@ interface Book {
     published_at: string | null;
     pdf_url: string | null;
     created_at: string;
+    seller_id: string | null;
+    status: 'pending' | 'approved' | 'rejected';
 }
 
 const BookManagement: React.FC = () => {
+    const { user, profile } = useAuth();
+    const navigate = useNavigate();
     const [books, setBooks] = useState<Book[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -24,6 +30,8 @@ const BookManagement: React.FC = () => {
     const [editingBookId, setEditingBookId] = useState<string | null>(null);
     const [pdfSource, setPdfSource] = useState<'url' | 'upload'>('url');
     const [uploading, setUploading] = useState(false);
+
+    const isInternalUser = profile?.role?.slug === 'super_admin' || profile?.role?.slug === 'editor';
 
     // Form state
     const [formData, setFormData] = useState({
@@ -34,20 +42,30 @@ const BookManagement: React.FC = () => {
         royalty_percentage: 70,
         description: '',
         cover_url: '',
-        pdf_url: ''
+        pdf_url: '',
+        seller_id: user?.id || null,
+        status: 'pending' as 'pending' | 'approved' | 'rejected'
     });
 
     useEffect(() => {
         fetchBooks();
-    }, []);
+    }, [user, profile]);
 
     const fetchBooks = async () => {
+        if (!user) return;
         try {
             setLoading(true);
-            const { data, error } = await supabase
+            let query = supabase
                 .from('books')
                 .select('*')
                 .order('created_at', { ascending: false });
+
+            // If not admin/editor, only show own books
+            if (!isInternalUser) {
+                query = query.eq('seller_id', user.id);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
             setBooks(data || []);
@@ -69,7 +87,9 @@ const BookManagement: React.FC = () => {
                 royalty_percentage: book.royalty_percentage,
                 description: book.description || '',
                 cover_url: book.cover_url || '',
-                pdf_url: book.pdf_url || ''
+                pdf_url: book.pdf_url || '',
+                seller_id: book.seller_id || user?.id || null,
+                status: book.status
             });
         } else {
             setEditingBookId(null);
@@ -81,7 +101,9 @@ const BookManagement: React.FC = () => {
                 royalty_percentage: 70,
                 description: '',
                 cover_url: '',
-                pdf_url: ''
+                pdf_url: '',
+                seller_id: user?.id || null,
+                status: 'pending'
             });
         }
         setPdfSource(book?.pdf_url?.includes('supabase.co/storage') ? 'upload' : 'url');
@@ -124,11 +146,17 @@ const BookManagement: React.FC = () => {
         try {
             setSaving(true);
 
+            const payload = { ...formData };
+            // Ensure seller_id is set if not admin override
+            if (!isInternalUser) {
+                payload.seller_id = user?.id || null;
+            }
+
             if (editingBookId) {
                 // Update
                 const { error } = await supabase
                     .from('books')
-                    .update(formData)
+                    .update(payload)
                     .eq('id', editingBookId);
 
                 if (error) throw error;
@@ -137,7 +165,7 @@ const BookManagement: React.FC = () => {
                 // Insert
                 const { error } = await supabase
                     .from('books')
-                    .insert([formData]);
+                    .insert([payload]);
 
                 if (error) throw error;
                 alert('Book added successfully!');
@@ -145,20 +173,29 @@ const BookManagement: React.FC = () => {
 
             setShowModal(false);
             setEditingBookId(null);
-            setFormData({
-                title: '',
-                author_name: '',
-                type: 'textbook',
-                price: 0,
-                royalty_percentage: 70,
-                description: '',
-                cover_url: '',
-                pdf_url: ''
-            });
             fetchBooks();
         } catch (error: any) {
             console.error('Error saving book:', error);
             alert('Error: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleUpdateStatus = async (bookId: string, newStatus: 'approved' | 'rejected') => {
+        try {
+            setSaving(true);
+            const { error } = await supabase
+                .from('books')
+                .update({ status: newStatus })
+                .eq('id', bookId);
+
+            if (error) throw error;
+            alert(`Book ${newStatus} successfully!`);
+            fetchBooks();
+        } catch (error: any) {
+            console.error('Error updating status:', error);
+            alert('Error updating status: ' + error.message);
         } finally {
             setSaving(false);
         }
@@ -173,8 +210,8 @@ const BookManagement: React.FC = () => {
         <div className="p-8 max-w-7xl mx-auto min-h-screen bg-slate-50">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 text-slate-900">
                 <div>
-                    <h1 className="text-2xl font-bold">Books Management</h1>
-                    <p className="text-slate-500 mt-1">Manage library catalog and publication types.</p>
+                    <h1 className="text-2xl font-bold">{isInternalUser ? 'Global Books Management' : 'My Books'}</h1>
+                    <p className="text-slate-500 mt-1">{isInternalUser ? 'Manage entire library catalog and publication types.' : 'Manage your book publications and sales.'}</p>
                 </div>
                 <button
                     onClick={() => handleOpenModal()}
@@ -210,6 +247,7 @@ const BookManagement: React.FC = () => {
                             <tr className="bg-slate-50 border-b border-slate-200">
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Book Info</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Type</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Price</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Royalty</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Actions</th>
@@ -236,8 +274,11 @@ const BookManagement: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
-                                            {book.type}
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                            book.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
+                                            }`}>
+                                            {book.status}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-slate-900">
@@ -246,13 +287,37 @@ const BookManagement: React.FC = () => {
                                     <td className="px-6 py-4 text-sm text-slate-600">
                                         {book.royalty_percentage}%
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-6 py-4 flex items-center gap-3">
+                                        <button
+                                            onClick={() => navigate(`/book/read/${book.id}`)}
+                                            className="text-slate-500 hover:text-slate-700 font-bold text-sm flex items-center gap-1"
+                                            title="Preview Book"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">visibility</span>
+                                            Read
+                                        </button>
                                         <button
                                             onClick={() => handleOpenModal(book)}
                                             className="text-primary hover:text-primary-dark font-bold text-sm"
                                         >
                                             Edit
                                         </button>
+                                        {isInternalUser && book.status === 'pending' && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleUpdateStatus(book.id, 'approved')}
+                                                    className="text-green-600 hover:text-green-700 font-bold text-sm"
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    onClick={() => handleUpdateStatus(book.id, 'rejected')}
+                                                    className="text-red-600 hover:text-red-700 font-bold text-sm"
+                                                >
+                                                    Reject
+                                                </button>
+                                            </>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -280,8 +345,8 @@ const BookManagement: React.FC = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                                 <div className="md:col-span-2">
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Book Title</label>
                                     <input
@@ -293,7 +358,7 @@ const BookManagement: React.FC = () => {
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                                     />
                                 </div>
-                                <div>
+                                <div className="col-span-1">
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Author Name</label>
                                     <input
                                         type="text"
@@ -303,7 +368,7 @@ const BookManagement: React.FC = () => {
                                         onChange={(e) => setFormData({ ...formData, author_name: e.target.value })}
                                     />
                                 </div>
-                                <div>
+                                <div className="col-span-1">
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Publication Type</label>
                                     <select
                                         className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm appearance-none"
@@ -315,7 +380,7 @@ const BookManagement: React.FC = () => {
                                         <option value="anthology">Anthology</option>
                                     </select>
                                 </div>
-                                <div>
+                                <div className="col-span-1">
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Price (USD)</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
@@ -328,7 +393,7 @@ const BookManagement: React.FC = () => {
                                         />
                                     </div>
                                 </div>
-                                <div>
+                                <div className="col-span-1">
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Royalty (%)</label>
                                     <input
                                         type="number"
@@ -348,9 +413,9 @@ const BookManagement: React.FC = () => {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <div className="flex items-center justify-between mb-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                                         <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Book PDF Source</label>
-                                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                                        <div className="flex bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
                                             <button
                                                 type="button"
                                                 onClick={() => setPdfSource('url')}
@@ -388,7 +453,7 @@ const BookManagement: React.FC = () => {
                                             />
                                             <label
                                                 htmlFor="pdf-upload"
-                                                className={`w-full p-3 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`w-full p-4 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <span className="material-symbols-outlined text-slate-400">
                                                     {uploading ? 'sync' : 'cloud_upload'}
@@ -418,18 +483,18 @@ const BookManagement: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-6 flex gap-3">
+                            <div className="pt-6 flex flex-col-reverse sm:flex-row gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 px-6 py-3 border border-slate-200 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-50 transition-all"
+                                    className="w-full sm:flex-1 px-6 py-3 border border-slate-200 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-50 transition-all"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-[2] px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
+                                    className="w-full sm:flex-[2] px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 disabled:opacity-50"
                                 >
                                     {saving ? 'Saving...' : editingBookId ? 'Update Book' : 'Create Book Record'}
                                 </button>

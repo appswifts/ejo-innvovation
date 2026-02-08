@@ -6,6 +6,7 @@ import Modal from '../../../components/Modal';
 
 const JournalManagement: React.FC = () => {
     const [journals, setJournals] = useState<Journal[]>([]);
+    const [packages, setPackages] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -24,12 +25,23 @@ const JournalManagement: React.FC = () => {
         editor_in_chief_name: '',
         impact_factor: '',
         is_open_access: true,
+        subscription_package_id: '',
         guidelines: '', // Add guidelines to form state
     });
 
     useEffect(() => {
         fetchJournals();
+        fetchPackages();
     }, []);
+
+    const fetchPackages = async () => {
+        const { data } = await supabase
+            .from('publication_packages')
+            .select('*')
+            .eq('type', 'journal_subscription')
+            .eq('is_active', true);
+        if (data) setPackages(data);
+    };
 
     const fetchJournals = async () => {
         const { data } = await supabase.from('journals').select('*').order('created_at', { ascending: false });
@@ -69,6 +81,7 @@ const JournalManagement: React.FC = () => {
             editor_in_chief_name: journal.editor_in_chief_name || '',
             impact_factor: journal.impact_factor ? journal.impact_factor.toString() : '',
             is_open_access: journal.is_open_access,
+            subscription_package_id: journal.subscription_package_id || '',
             guidelines: journal.guidelines || '',
         });
         setIsModalOpen(true);
@@ -88,6 +101,7 @@ const JournalManagement: React.FC = () => {
             editor_in_chief_name: '',
             impact_factor: '',
             is_open_access: true,
+            subscription_package_id: '',
             guidelines: '',
         });
     };
@@ -100,6 +114,7 @@ const JournalManagement: React.FC = () => {
             const payload = {
                 ...formData,
                 impact_factor: formData.impact_factor ? parseFloat(formData.impact_factor) : null,
+                subscription_package_id: formData.is_open_access ? null : (formData.subscription_package_id || null),
             };
 
             let error;
@@ -150,6 +165,7 @@ const JournalManagement: React.FC = () => {
                             editor_in_chief_name: '',
                             impact_factor: '',
                             is_open_access: true,
+                            subscription_package_id: '',
                             guidelines: '',
                         });
                         setIsModalOpen(true);
@@ -347,6 +363,27 @@ const JournalManagement: React.FC = () => {
                                 </div>
                             </label>
                         </div>
+
+                        {!formData.is_open_access && (
+                            <div className="md:col-span-2 slide-in">
+                                <label className="block text-sm font-bold text-slate-700 mb-1">Subscription Package <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    name="subscription_package_id"
+                                    value={formData.subscription_package_id}
+                                    onChange={handleChange}
+                                    className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+                                >
+                                    <option value="">Select a package</option>
+                                    {packages.map(pkg => (
+                                        <option key={pkg.id} value={pkg.id}>
+                                            {pkg.name} ({pkg.currency} {pkg.price.toFixed(2)})
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-xs text-slate-500">Select the package readers must purchase to access this journal.</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pt-6 flex items-center justify-end gap-3 border-t border-slate-100 mt-6">

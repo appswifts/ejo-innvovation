@@ -4,6 +4,7 @@ import TopNav from '../../components/TopNav';
 import { supabase } from '../../lib/supabaseClient';
 
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Article {
   id: string;
@@ -12,16 +13,23 @@ interface Article {
   submission_date: string;
   status: string;
   payment_status: string;
+  price?: number;
+  currency?: string;
   submitter: {
+    id: string;
     full_name: string;
-  } | { full_name: string }[] | null;
+  } | { id: string; full_name: string }[] | null;
 }
 
 const JournalDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id: journalId } = useParams<{ id: string }>();
+  const { user, profile } = useAuth();
   const [journal, setJournal] = useState<Journal | null>(null);
+  const [subscriptionPackage, setSubscriptionPackage] = useState<any | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [purchasedArticles, setPurchasedArticles] = useState<Set<string>>(new Set());
+  const [hasJournalAccess, setHasJournalAccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'about' | 'guideline' | 'aims'>('about');
 
@@ -41,33 +49,61 @@ const JournalDetail: React.FC = () => {
         if (journalError) throw journalError;
         setJournal(journalData);
 
-        // 2. Fetch Published Articles (Manuscripts)
-        // Note: In real production, status should be 'published'. 
-        // For now, listing 'submitted' or 'accepted' too so user sees something while testing.
-        // Or I can strictly filter by 'published' and user has to publish one.
-        // Let's filter by status NOT 'rejected' basically, or maybe just list all for now until workflow is tighter.
-        // Better approach: Show "published" and "accepted".
-        // Note: Filter for (status = published) OR (status = accepted AND payment_status = paid)
-        // Since Supabase OR query with AND is tricky in one go without raw SQL or complex filters,
-        // we will fetch 'accepted' and 'published' first, then filter in memory for now OR use a more complex query if needed.
-        // For simplicity and to show all potential valid ones:
+        // 1.1 Fetch Subscription Package if exists
+        if (journalData.subscription_package_id) {
+          const { data: pkg } = await supabase
+            .from('publication_packages')
+            .select('*')
+            .eq('id', journalData.subscription_package_id)
+            .single();
+          setSubscriptionPackage(pkg);
+        }
+
+        // 2. Fetch Published/Accepted Articles
         const { data: articlesData, error: articlesError } = await supabase
           .from('manuscripts')
-          .select('id, title, abstract, submission_date, status, payment_status, submitter:submitter_id(full_name)')
+          .select('id, title, abstract, submission_date, status, payment_status, price, currency, submitter:submitter_id(id, full_name)')
           .eq('journal_id', journalId)
           .in('status', ['published', 'accepted'])
           .order('submission_date', { ascending: false });
 
         if (articlesError) throw articlesError;
 
-        // Strict Filter:
-        // Show if status is 'published' 
-        // OR if status is 'accepted' AND payment_status is 'paid'
+        // Strict Filter: published OR (accepted AND paid)
         const visibleArticles = (articlesData || []).filter((article: any) =>
           article.status === 'published' || (article.status === 'accepted' && article.payment_status === 'paid')
         );
 
         setArticles(visibleArticles);
+
+        // 3. Check Access (Transactions) if user is logged in
+        if (user && !journalData.is_open_access) {
+          // Check for article purchases
+          const { data: articleTransactions } = await supabase
+            .from('transactions')
+            .select('manuscript_id')
+            .eq('user_id', user.id)
+            .eq('type', 'purchase')
+            .eq('status', 'completed');
+
+          const purchasedIds = new Set(articleTransactions?.map(t => t.manuscript_id) || []);
+          setPurchasedArticles(purchasedIds);
+
+          // Check for journal subscription
+          if (journalData.subscription_package_id) {
+            const { data: subTransactions } = await supabase
+              .from('transactions')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('package_id', journalData.subscription_package_id)
+              .eq('status', 'completed')
+              .limit(1);
+
+            if (subTransactions && subTransactions.length > 0) {
+              setHasJournalAccess(true);
+            }
+          }
+        }
 
       } catch (err) {
         console.error("Error fetching journal data", err);
@@ -75,8 +111,9 @@ const JournalDetail: React.FC = () => {
         setLoading(false);
       }
     };
+
     fetchData();
-  }, [journalId]);
+  }, [journalId, user]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
@@ -201,47 +238,80 @@ const JournalDetail: React.FC = () => {
 
               <div className="space-y-6">
                 {articles.length > 0 ? (
-                  articles.map(article => (
-                    <div
-                      key={article.id}
-                      onClick={() => navigate(`/articles/${article.id}`)}
-                      className="group p-6 bg-white rounded-xl border border-slate-200 hover:shadow-lg transition-all cursor-pointer"
-                    >
-                      <div className="flex gap-2 text-xs font-bold text-primary uppercase mb-3">
-                        <span>Research Article</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-slate-500">{new Date(article.submission_date).toLocaleDateString()}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] ${article.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
-                          }`}>
-                          {article.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <h4 className="text-xl font-bold font-serif group-hover:text-primary transition-colors mb-2 text-slate-900">
-                        {article.title}
-                      </h4>
-                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">
-                        {article.abstract}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium italic text-slate-500">
-                          {Array.isArray(article.submitter)
-                            ? article.submitter[0]?.full_name
-                            : article.submitter?.full_name || 'Unknown Author'}
-                        </span>
-                        <div className="flex gap-3 items-center">
-                          {!journal?.is_open_access && (
-                            <span className="flex items-center gap-1 text-xs font-bold bg-amber-100 text-amber-700 px-2 py-1 rounded">
-                              <span className="material-symbols-outlined text-sm">lock</span> Requires Access
-                            </span>
-                          )}
-                          <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-primary hover:text-white transition-colors">
-                            <span className="material-symbols-outlined text-sm">visibility</span> View
-                          </button>
+                  articles.map(article => {
+                    const isAuthor = user?.id === (Array.isArray(article.submitter) ? article.submitter[0]?.id : (article.submitter as any)?.id);
+                    const isAdminOrEditor = ['super_admin', 'editor'].includes(profile?.role?.slug || '');
+                    const hasAccess = journal?.is_open_access || hasJournalAccess || purchasedArticles.has(article.id) || isAuthor || isAdminOrEditor;
+
+                    return (
+                      <div
+                        key={article.id}
+                        onClick={() => navigate(`/articles/${article.id}`)}
+                        className="group p-6 bg-white rounded-xl border border-slate-200 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden"
+                      >
+                        <div className="flex gap-2 text-xs font-bold text-primary uppercase mb-3">
+                          <span>Research Article</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-500">{new Date(article.submission_date).toLocaleDateString()}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] ${article.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                            {article.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        <h4 className="text-xl font-bold font-serif group-hover:text-primary transition-colors mb-2 text-slate-900">
+                          {article.title}
+                        </h4>
+                        <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+                          {article.abstract}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium italic text-slate-500">
+                            {Array.isArray(article.submitter)
+                              ? article.submitter[0]?.full_name
+                              : (article.submitter as any)?.full_name || 'Unknown Author'}
+                          </span>
+                          <div className="flex gap-3 items-center">
+                            {hasAccess ? (
+                              <span className="flex items-center gap-1 text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">
+                                <span className="material-symbols-outlined text-sm">lock_open</span> Access Granted
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-slate-900">
+                                  {article.currency} {article.price?.toFixed(2)}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!user) {
+                                      const checkoutUrl = encodeURIComponent(`/checkout?type=article&id=${article.id}`);
+                                      navigate(`/login?redirect=${checkoutUrl}`);
+                                      return;
+                                    }
+                                    navigate(`/checkout?type=article&id=${article.id}`);
+                                  }}
+                                  className="flex items-center gap-1 text-xs font-bold bg-primary text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors z-10"
+                                >
+                                  <span className="material-symbols-outlined text-sm">shopping_cart</span> Buy
+                                </button>
+                              </div>
+                            )}
+                            {!hasAccess && (
+                              <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-slate-200 transition-colors">
+                                <span className="material-symbols-outlined text-sm">visibility</span> View
+                              </button>
+                            )}
+                            {hasAccess && (
+                              <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-primary hover:text-white transition-colors">
+                                <span className="material-symbols-outlined text-sm">visibility</span> View
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
                     <p className="text-slate-500 mb-2">No articles found in this journal yet.</p>
@@ -261,6 +331,38 @@ const JournalDetail: React.FC = () => {
                 </button>
                 <p className="text-center text-[11px] text-slate-400 mt-4 uppercase tracking-widest font-bold">Avg. Review Time: 45 Days</p>
               </div>
+
+              {!journal.is_open_access && !hasJournalAccess && subscriptionPackage && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">Subscribe to Journal</h3>
+                  <p className="text-sm text-slate-500 mb-6">Gain full access to all articles in this journal with a subscription.</p>
+                  <div className="bg-slate-50 p-4 rounded-lg mb-6 flex justify-between items-center">
+                    <div>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Package</p>
+                      <p className="font-bold text-slate-900 text-sm">{subscriptionPackage.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-primary">{subscriptionPackage.currency} {subscriptionPackage.price.toFixed(2)}</p>
+                      <p className="text-[10px] text-slate-400">/{subscriptionPackage.duration_months} Months</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        const checkoutUrl = encodeURIComponent(`/checkout?type=subscription&id=${journal.id}`);
+                        navigate(`/login?redirect=${checkoutUrl}`);
+                        return;
+                      }
+                      navigate(`/checkout?type=subscription&id=${journal.id}`);
+                    }}
+                    className="w-full bg-slate-900 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-all active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-sm">workspace_premium</span>
+                    Subscribe Now
+                  </button>
+                </div>
+              )}
 
               <div className="bg-primary/5 rounded-2xl p-8 border border-primary/20">
                 <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editor Team</h3>

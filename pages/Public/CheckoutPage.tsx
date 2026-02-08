@@ -25,12 +25,18 @@ const CheckoutPage: React.FC = () => {
     const [orderSuccess, setOrderSuccess] = useState(false);
 
     useEffect(() => {
+        if (!loading && !user) {
+            const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            navigate(`/login?redirect=${currentUrl}`);
+            return;
+        }
+
         if (!type || !id) {
             navigate('/');
             return;
         }
         fetchItemDetails();
-    }, [type, id, packageId]);
+    }, [type, id, packageId, user, loading]);
 
     const fetchItemDetails = async () => {
         try {
@@ -65,6 +71,42 @@ const CheckoutPage: React.FC = () => {
                         description: `Package: ${pkg.name}`
                     });
                 }
+            } else if (type === 'article') {
+                const { data, error } = await supabase
+                    .from('manuscripts')
+                    .select('title, price, currency')
+                    .eq('id', id)
+                    .single();
+                if (error) throw error;
+                setItem({
+                    title: `Article Access: ${data.title}`,
+                    price: data.price || 0,
+                    currency: data.currency || 'USD',
+                    description: 'Full text access (PDF download)'
+                });
+            } else if (type === 'subscription') {
+                const { data: journal, error: journalError } = await supabase
+                    .from('journals')
+                    .select('title, subscription_package_id')
+                    .eq('id', id)
+                    .single();
+                if (journalError) throw journalError;
+
+                if (!journal.subscription_package_id) throw new Error('Journal has no subscription package');
+
+                const { data: pkg, error: pkgError } = await supabase
+                    .from('publication_packages')
+                    .select('name, price, currency')
+                    .eq('id', journal.subscription_package_id)
+                    .single();
+                if (pkgError) throw pkgError;
+
+                setItem({
+                    title: `Subscription: ${journal.title}`,
+                    price: parseFloat(pkg.price),
+                    currency: pkg.currency,
+                    description: `Package: ${pkg.name} (Access to all articles)`
+                });
             }
         } catch (error) {
             console.error('Error fetching item details:', error);
@@ -84,7 +126,8 @@ const CheckoutPage: React.FC = () => {
                 user_id: user.id,
                 amount: item.price,
                 currency: item.currency,
-                type: type === 'book' ? 'purchase' : 'apc_payment',
+                type: type === 'subscription' ? 'journal_subscription' :
+                    (type === 'book' || type === 'article') ? 'purchase' : 'apc_payment',
                 status: 'pending',
                 description: `Order for ${item.title}`,
             };
@@ -93,6 +136,18 @@ const CheckoutPage: React.FC = () => {
             if (type === 'manuscript') {
                 transactionData.manuscript_id = id;
                 transactionData.package_id = packageId;
+            }
+            if (type === 'article') {
+                transactionData.manuscript_id = id;
+            }
+            if (type === 'subscription') {
+                // For subscriptions, we need the package_id linked to the journal
+                const { data: journal } = await supabase
+                    .from('journals')
+                    .select('subscription_package_id')
+                    .eq('id', id)
+                    .single();
+                transactionData.package_id = journal?.subscription_package_id;
             }
 
             const { error } = await supabase

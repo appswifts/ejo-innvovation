@@ -14,6 +14,7 @@ interface Book {
     id: string;
     title: string;
     pdf_url: string | null;
+    seller_id: string | null;
 }
 
 const BookReader: React.FC = () => {
@@ -39,7 +40,7 @@ const BookReader: React.FC = () => {
             // 1. Fetch Book Details
             const { data: bookData, error: bookError } = await supabase
                 .from('books')
-                .select('id, title, pdf_url')
+                .select('id, title, pdf_url, seller_id')
                 .eq('id', id)
                 .single();
 
@@ -76,7 +77,7 @@ const BookReader: React.FC = () => {
                 .eq('id', profile?.role_id)
                 .single();
 
-            if (role?.slug === 'super_admin' || transaction) {
+            if (['super_admin', 'editor'].includes(role?.slug) || transaction || bookData.seller_id === user.id) {
                 setHasAccess(true);
             } else {
                 setHasAccess(false);
@@ -221,8 +222,7 @@ const BookReader: React.FC = () => {
                             showPageCorners={true}
                             disableFlipByClick={false}
                             onFlip={() => {
-                                const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/1470/1470-preview.mp3');
-                                audio.play().catch(e => console.log("Audio playback failed:", e));
+                                // Sound removed for better UX
                             }}
                         >
                             {Array.from(new Array(numPages), (el, index) => (

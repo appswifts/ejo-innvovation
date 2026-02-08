@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ViewState } from './types';
 import { useAuth } from './contexts/AuthContext';
+
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import LandingPage from './pages/Public/LandingPage';
@@ -22,8 +23,12 @@ import ReviewerPortal from './pages/Dashboard/ReviewerPortal';
 import FinanceDashboard from './pages/Dashboard/FinanceDashboard';
 import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import JournalManagement from './pages/Dashboard/Admin/JournalManagement';
-import RoleManager from './pages/Dashboard/Admin/RoleManager';
+import Roles from './pages/Dashboard/Admin/Roles';
 import BookManagement from './pages/Dashboard/Admin/BookManagement';
+import AdminApplications from './pages/Dashboard/Admin/Applications';
+import Applications from './pages/Dashboard/Reader/Applications';
+import UserApplications from './pages/Dashboard/Reader/UserApplications';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const App: React.FC = () => {
   const { user, loading, profile } = useAuth();
@@ -31,54 +36,62 @@ const App: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background-light">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative">
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/journals" element={<JournalsPage />} />
-        <Route path="/journals/:id" element={<JournalDetail />} />
-        <Route path="/articles/:id" element={<ArticleView />} />
-        <Route path="/books" element={<BooksPage />} />
-        <Route path="/book/read/:id" element={<BookReader />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
+    <div className="bg-background text-foreground font-sans antialiased">
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/journals" element={<JournalsPage />} />
+          <Route path="/journals/:id" element={<JournalDetail />} />
+          <Route path="/articles/:id" element={<ArticleView />} />
+          <Route path="/books" element={<BooksPage />} />
+          <Route path="/book/read/:id" element={<BookReader />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
 
-        {/* Dashboard Routes (Protected) */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Overview />} />
-          <Route path="overview" element={<Overview />} />
+          {/* Dashboard Routes (Protected) */}
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<Overview />} />
+            <Route path="overview" element={<Overview />} />
 
-          {/* Author Routes */}
-          <Route path="submit" element={<SubmissionWizard />} />
-          <Route path="my-manuscripts" element={<AuthorDashboard />} />
+            {/* Admin Routes */}
+            <Route path="admin/users" element={<UserManagement />} />
+            <Route path="admin/roles" element={<Roles />} />
+            <Route path="admin/journals" element={<JournalManagement />} />
+            <Route path="admin/applications" element={<AdminApplications />} /> {/* Admin Review */}
+            <Route path="admin/books" element={<BookManagement />} />
 
-          {/* Editor Routes */}
-          <Route path="submissions" element={<EditorDashboard />} />
-          <Route path="submissions/:id" element={<ManuscriptDetailPage />} />
+            {/* Author Routes */}
+            <Route path="submit" element={<SubmissionWizard />} />
+            <Route path="my-manuscripts" element={<AuthorDashboard />} />
+            <Route path="books" element={<BookManagement />} />
 
-          {/* Reviewer Routes */}
-          <Route path="reviews" element={<ReviewerPortal />} />
+            {/* Reader / Applicant Routes */}
+            <Route path="applications" element={<UserApplications />} /> {/* Reader List */}
+            <Route path="applications/new" element={<Applications />} /> {/* Reader Apply */}
 
-          {/* Finance Routes */}
-          <Route path="finance" element={<FinanceDashboard />} />
+            {/* Editor Routes */}
+            <Route path="submissions" element={<EditorDashboard />} />
+            <Route path="submissions/:id" element={<ManuscriptDetailPage />} />
 
-          {/* Admin Routes */}
-          <Route path="admin/users" element={<UserManagement />} />
-          <Route path="admin/journals" element={<JournalManagement />} />
-          <Route path="admin/roles" element={<RoleManager />} />
-          <Route path="admin/books" element={<BookManagement />} />
-        </Route>
+            {/* Reviewer Routes */}
+            <Route path="reviews" element={<ReviewerPortal />} />
 
-        {/* Catch All */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+            {/* Finance Routes */}
+            <Route path="finance" element={<FinanceDashboard />} />
+          </Route>
+
+          {/* Catch All */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   );
 };
