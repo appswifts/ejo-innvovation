@@ -54,10 +54,13 @@ const LandingPage: React.FC = () => {
       {/* Navbar */}
       <nav className="fixed w-full z-50 bg-white/95 dark:bg-background-dark/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+          <div className="flex justify-between h-24 items-center">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
-              <span className="font-bold text-xl tracking-tight text-gray-900 dark:text-white">Nkiza Journals</span>
+              <img
+                src="/Logo Nkiza Center.png"
+                alt="Nkiza Center Logo"
+                className="h-20 w-auto object-contain"
+              />
             </div>
             <div className="hidden md:flex space-x-8">
               <button onClick={() => navigate('/journals')} className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">Journals</button>
@@ -292,8 +295,11 @@ const LandingPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
             <div className="lg:col-span-1">
               <div className="flex items-center gap-2 mb-6">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">N</div>
-                <span className="font-bold text-xl tracking-tight">Nkiza Center</span>
+                <img
+                  src="/Logo Nkiza Center.png"
+                  alt="Nkiza Center Logo"
+                  className="h-20 w-auto object-contain brightness-0 invert"
+                />
               </div>
               <p className="text-gray-400 text-sm leading-relaxed mb-8">
                 Nkiza Academic Publishing specializes in multidisciplinary research dissemination, providing a robust platform for authors to share findings with a global community of scholars.

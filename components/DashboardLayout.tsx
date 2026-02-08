@@ -70,9 +70,13 @@ const DashboardLayout: React.FC = () => {
 
             {/* Sidebar */}
             <aside className={`fixed inset-y-0 left-0 z-30 transform ${sidebarOpen ? '-translate-x-full lg:translate-x-0 lg:w-20' : 'translate-x-0 w-64'} bg-slate-900 text-slate-300 transition-all duration-300 flex flex-col shadow-xl lg:static lg:inset-auto lg:transform-none`}>
-                <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800 shrink-0">
+                <div className="h-24 flex items-center justify-between px-4 border-b border-slate-800 shrink-0">
                     {(!sidebarOpen || (sidebarOpen && !window.matchMedia('(min-width: 1024px)').matches)) && (
-                        <span className="text-white font-bold text-lg tracking-tight">Nkiza<span className="text-primary">Admin</span></span>
+                        <img
+                            src="/Logo Nkiza Center.png"
+                            alt="Nkiza Center Logo"
+                            className="h-16 w-auto object-contain brightness-0 invert"
+                        />
                     )}
                     <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
                         <span className="material-symbols-outlined">{sidebarOpen ? 'menu' : 'menu_open'}</span>
@@ -123,14 +127,18 @@ const DashboardLayout: React.FC = () => {
             {/* Main Content */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 font-sans">
                 {/* Mobile Header */}
-                <header className="h-16 flex items-center px-4 bg-white border-b border-slate-200 lg:hidden shrink-0">
+                <header className="h-24 flex items-center px-4 bg-white border-b border-slate-200 lg:hidden shrink-0">
                     <button
                         onClick={() => setSidebarOpen(false)}
                         className="p-2 -ml-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
                     >
                         <span className="material-symbols-outlined">menu</span>
                     </button>
-                    <span className="ml-4 text-slate-900 font-bold tracking-tight">Nkiza<span className="text-primary">Admin</span></span>
+                    <img
+                        src="/Logo Nkiza Center.png"
+                        alt="Nkiza Center Logo"
+                        className="h-16 w-auto object-contain ml-4"
+                    />
                 </header>
 
                 <main className="flex-1 overflow-auto p-0 bg-slate-50">

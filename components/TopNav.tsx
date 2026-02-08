@@ -27,15 +27,14 @@ const TopNav: React.FC<TopNavProps> = ({ transparent = false }) => {
   return (
     <header className={`sticky top-0 z-50 w-full border-b border-gray-200 ${transparent ? 'bg-white/90 backdrop-blur-md' : 'bg-white'} transition-colors duration-200`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center h-24">
           <div className="flex items-center gap-8">
             <button onClick={() => navigate('/')} className="flex items-center gap-2 group">
-              <div className="text-primary group-hover:scale-110 transition-transform">
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
-                </svg>
-              </div>
-              <span className="text-xl font-black tracking-tight font-serif text-slate-900">Nkiza Journals</span>
+              <img
+                src="/Logo Nkiza Center.png"
+                alt="Nkiza Center Logo"
+                className="h-20 w-auto object-contain group-hover:scale-105 transition-transform"
+              />
             </button>
             <nav className="hidden md:flex items-center gap-6">
               <button onClick={() => navigate('/journals')} className={`text-sm font-medium transition-colors text-slate-600 hover:text-primary`}>Journals</button>
