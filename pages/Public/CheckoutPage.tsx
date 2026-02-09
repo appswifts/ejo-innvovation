@@ -23,6 +23,7 @@ const CheckoutPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'dpo'>('dpo');
 
     useEffect(() => {
         if (!loading && !user) {
@@ -36,7 +37,7 @@ const CheckoutPage: React.FC = () => {
             return;
         }
         fetchItemDetails();
-    }, [type, id, packageId, user, loading]);
+    }, [type, id, packageId, user]);
 
     const fetchItemDetails = async () => {
         try {
@@ -122,6 +123,27 @@ const CheckoutPage: React.FC = () => {
         try {
             setProcessing(true);
 
+            if (paymentMethod === 'dpo') {
+                // DPO Payment Flow
+                const { createPaymentIntent } = await import('../../lib/dpo');
+                const response = await createPaymentIntent(
+                    item.price,
+                    item.currency,
+                    user.email || '',
+                    {
+                        userId: user.id,
+                        type,
+                        itemId: id,
+                        packageId: type === 'subscription' || type === 'manuscript' ? packageId : undefined
+                    }
+                );
+
+                // Redirect to DPO Payment Page
+                window.location.href = response.url;
+                return;
+            }
+
+            // Manual Bank Transfer Flow
             const transactionData: any = {
                 user_id: user.id,
                 amount: item.price,
@@ -130,6 +152,7 @@ const CheckoutPage: React.FC = () => {
                     (type === 'book' || type === 'article') ? 'purchase' : 'apc_payment',
                 status: 'pending',
                 description: `Order for ${item.title}`,
+                payment_gateway: 'manual'
             };
 
             if (type === 'book') transactionData.book_id = id;
@@ -250,6 +273,38 @@ const CheckoutPage: React.FC = () => {
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
                             <strong>Note:</strong> We currently only support manual bank transfers. After confirming your order, you will receive our bank details. Your purchase will be activated after our finance team verifies the transfer.
                         </p>
+                    </div>
+
+                    {/* Payment Method Selection */}
+                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mt-8">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 underline decoration-primary decoration-4 underline-offset-8">Payment Method</p>
+                        <div className="space-y-4">
+                            <div
+                                onClick={() => setPaymentMethod('dpo')}
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'dpo' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'dpo' ? 'border-primary' : 'border-slate-300'}`}>
+                                        {paymentMethod === 'dpo' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
+                                    </div>
+                                    <span className="font-bold text-slate-900">Pay with Card / Mobile Money</span>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">DPO Pay</span>
+                            </div>
+
+                            <div
+                                onClick={() => setPaymentMethod('manual')}
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'manual' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'manual' ? 'border-primary' : 'border-slate-300'}`}>
+                                        {paymentMethod === 'manual' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
+                                    </div>
+                                    <span className="font-bold text-slate-900">Manual Bank Transfer</span>
+                                </div>
+                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Offline</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

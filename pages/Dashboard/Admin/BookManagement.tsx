@@ -201,6 +201,27 @@ const BookManagement: React.FC = () => {
         }
     };
 
+    const handleDeleteBook = async (bookId: string) => {
+        if (!window.confirm('Are you sure you want to delete this book? This action cannot be undone.')) return;
+
+        try {
+            setSaving(true);
+            const { error } = await supabase
+                .from('books')
+                .delete()
+                .eq('id', bookId);
+
+            if (error) throw error;
+            alert('Book deleted successfully!');
+            fetchBooks();
+        } catch (error: any) {
+            console.error('Error deleting book:', error);
+            alert('Error deleting book: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const filteredBooks = books.filter(b =>
         b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (b.author_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
@@ -302,6 +323,16 @@ const BookManagement: React.FC = () => {
                                         >
                                             Edit
                                         </button>
+                                        {isInternalUser && (
+                                            <button
+                                                onClick={() => handleDeleteBook(book.id)}
+                                                className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-1"
+                                                title="Delete Book"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                                Delete
+                                            </button>
+                                        )}
                                         {isInternalUser && book.status === 'pending' && (
                                             <>
                                                 <button
