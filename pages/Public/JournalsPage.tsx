@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, Journal } from '../../types';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 import { supabase } from '../../lib/supabaseClient';
 
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +40,8 @@ const JournalsPage: React.FC = () => {
             aims_scope: "Dedicated to the dissemination of significant economic research that impacts policy globally. NIJE publishes peer-reviewed original research.",
             impact_factor: 2.4,
             is_open_access: true,
-            description: ""
+            description: "",
+            created_at: new Date().toISOString()
           },
           {
             id: '2',
@@ -52,7 +54,8 @@ const JournalsPage: React.FC = () => {
             aims_scope: "A transdisciplinary journal focusing on the development and application of engineering principles to the nervous system.",
             impact_factor: 3.1,
             is_open_access: true,
-            description: ""
+            description: "",
+            created_at: new Date().toISOString()
           }
         ]);
       }
@@ -162,6 +165,7 @@ const JournalsPage: React.FC = () => {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

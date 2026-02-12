@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState } from '../../types';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -331,6 +332,7 @@ const ArticleView: React.FC = () => {
           </aside>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

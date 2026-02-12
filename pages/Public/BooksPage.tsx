@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ViewState } from '../../types';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 import { supabase } from '../../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -241,6 +242,7 @@ const BooksPage: React.FC = () => {
           )}
         </section>
       </main>
+      <Footer />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ViewState, Journal } from '../../types';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 import { supabase } from '../../lib/supabaseClient';
 
 import { useNavigate, useParams } from 'react-router-dom';
@@ -383,6 +384,7 @@ const JournalDetail: React.FC = () => {
           </aside>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 
 const AboutUs: React.FC = () => {
     return (
@@ -98,10 +99,7 @@ const AboutUs: React.FC = () => {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-400">
-                &copy; {new Date().getFullYear()} Nkiza Center. All rights reserved.
-            </footer>
+            <Footer />
         </div>
     );
 };

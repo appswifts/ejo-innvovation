@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import TopNav from '../../components/TopNav';
+import Footer from '../../components/Footer';
 
 const ContactUs: React.FC = () => {
     const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
@@ -135,9 +136,7 @@ const ContactUs: React.FC = () => {
                 </div>
             </section>
 
-            <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-400">
-                &copy; {new Date().getFullYear()} Nkiza Center. All rights reserved.
-            </footer>
+            <Footer />
         </div>
     );
 };

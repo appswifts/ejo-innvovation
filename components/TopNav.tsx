@@ -41,6 +41,8 @@ const TopNav: React.FC<TopNavProps> = ({ transparent = false }) => {
               <button onClick={() => navigate('/books')} className={`text-sm font-medium transition-colors text-slate-600 hover:text-primary`}>Books</button>
               <button onClick={() => navigate('/about')} className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">About</button>
               <button onClick={() => navigate('/contact')} className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Contact</button>
+              <button onClick={() => navigate('/privacy')} className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Privacy</button>
+              <button onClick={() => navigate('/copyright')} className="text-sm font-medium text-slate-600 hover:text-primary transition-colors">Copyright</button>
             </nav>
           </div>
           <div className="flex items-center gap-4">

@@ -32,6 +32,7 @@ import BookManagement from './pages/Dashboard/Admin/BookManagement';
 import AdminApplications from './pages/Dashboard/Admin/Applications';
 import Applications from './pages/Dashboard/Reader/Applications';
 import UserApplications from './pages/Dashboard/Reader/UserApplications';
+import PostBook from './pages/Dashboard/PostBook';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -80,6 +81,7 @@ const App: React.FC = () => {
             <Route path="submit" element={<SubmissionWizard />} />
             <Route path="my-manuscripts" element={<AuthorDashboard />} />
             <Route path="books" element={<BookManagement />} />
+            <Route path="post-book" element={<PostBook />} />
 
             {/* Reader / Applicant Routes */}
             <Route path="applications" element={<UserApplications />} /> {/* Reader List */}

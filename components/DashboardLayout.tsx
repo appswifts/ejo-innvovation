@@ -29,6 +29,7 @@ const DashboardLayout: React.FC = () => {
 
             // Book Seller
             { label: 'My Books', icon: 'library_books', path: '/dashboard/books', roles: ['book_seller', 'author_bookseller'] },
+            { label: 'Post a Book', icon: 'publish', path: '/dashboard/post-book', roles: ['book_seller', 'author_bookseller'] },
 
             // Editor / Super Admin
             { label: 'All Submissions', icon: 'inventory_2', path: '/dashboard/submissions', roles: ['editor', 'super_admin'] },
