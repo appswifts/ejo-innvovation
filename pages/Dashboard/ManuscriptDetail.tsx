@@ -54,6 +54,10 @@ const ManuscriptDetailPage: React.FC = () => {
     const [newFile, setNewFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [reviewers, setReviewers] = useState<{ id: string; full_name: string; email: string }[]>([]);
+    const [selectedReviewer, setSelectedReviewer] = useState('');
+    const [assigningReviewer, setAssigningReviewer] = useState(false);
+    const [currentReviewer, setCurrentReviewer] = useState<{ id: string; full_name: string } | null>(null);
 
     const isEditor = profile?.role?.slug === 'super_admin' || profile?.role?.slug === 'editor';
 
@@ -67,8 +71,75 @@ const ManuscriptDetailPage: React.FC = () => {
     useEffect(() => {
         if (manuscript?.id) {
             fetchComments(manuscript.id);
+            fetchReviewAssignment(manuscript.id);
         }
     }, [manuscript?.id]);
+
+    useEffect(() => {
+        if (isEditor) fetchReviewers();
+    }, [isEditor]);
+
+    const fetchReviewers = async () => {
+        const { data } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, role:role_id(slug)')
+            .order('full_name');
+        if (data) {
+            // Allow any user to be assigned as reviewer
+            setReviewers(data.map((d: any) => ({ id: d.id, full_name: d.full_name || d.email, email: d.email })));
+        }
+    };
+
+    const fetchReviewAssignment = async (manuscriptId: string) => {
+        const { data } = await supabase
+            .from('reviews')
+            .select('reviewer:profiles!reviews_reviewer_id_fkey(id, full_name)')
+            .eq('manuscript_id', manuscriptId)
+            .order('assigned_at', { ascending: false })
+            .limit(1);
+        if (data && data.length > 0 && data[0].reviewer) {
+            const rev = data[0].reviewer as any;
+            setCurrentReviewer({ id: rev.id, full_name: rev.full_name });
+            setSelectedReviewer(rev.id);
+        }
+    };
+
+    const handleAssignReviewer = async () => {
+        if (!selectedReviewer || !manuscript) return;
+        try {
+            setAssigningReviewer(true);
+            // Upsert into reviews table
+            const { error } = await supabase.from('reviews').insert({
+                manuscript_id: manuscript.id,
+                reviewer_id: selectedReviewer,
+                status: 'invited',
+                assigned_at: new Date().toISOString(),
+                due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 2 weeks
+            });
+            if (error) throw error;
+            const reviewer = reviewers.find(r => r.id === selectedReviewer);
+            setCurrentReviewer(reviewer ? { id: reviewer.id, full_name: reviewer.full_name } : null);
+            alert(`Reviewer assigned successfully!`);
+        } catch (error: any) {
+            console.error('Error assigning reviewer:', error);
+            alert('Error: ' + error.message);
+        } finally {
+            setAssigningReviewer(false);
+        }
+    };
+
+    const handleDeleteManuscript = async () => {
+        if (!manuscript) return;
+        if (!window.confirm('Are you sure you want to delete this manuscript? This action cannot be undone.')) return;
+        try {
+            const { error } = await supabase.from('manuscripts').delete().eq('id', manuscript.id);
+            if (error) throw error;
+            alert('Manuscript deleted.');
+            navigate('/dashboard/submissions');
+        } catch (error: any) {
+            alert('Error deleting manuscript: ' + error.message);
+        }
+    };
 
     const fetchComments = async (manuscriptId: string) => {
         try {
@@ -610,6 +681,48 @@ const ManuscriptDetailPage: React.FC = () => {
                                             <span className="material-symbols-outlined text-sm">payments</span> Mark as Paid (Manual)
                                         </button>
                                     )}
+                                </div>
+
+                                {/* Reviewer Assignment */}
+                                <div className="pt-6 border-t border-slate-100">
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Assign Reviewer</label>
+                                    {currentReviewer && (
+                                        <div className="mb-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-emerald-600 text-sm">person</span>
+                                            <span className="text-sm font-medium text-emerald-700">{currentReviewer.full_name}</span>
+                                            <span className="text-[10px] text-emerald-500 ml-auto">Current Reviewer</span>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={selectedReviewer}
+                                            onChange={(e) => setSelectedReviewer(e.target.value)}
+                                            className="flex-1 p-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                                        >
+                                            <option value="">Select reviewer...</option>
+                                            {reviewers.map(r => (
+                                                <option key={r.id} value={r.id}>{r.full_name} ({r.email})</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={handleAssignReviewer}
+                                            disabled={!selectedReviewer || assigningReviewer}
+                                            className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark disabled:opacity-50 transition-all"
+                                        >
+                                            {assigningReviewer ? '...' : 'Assign'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Delete */}
+                                <div className="pt-6 border-t border-slate-100">
+                                    <button
+                                        onClick={handleDeleteManuscript}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-all"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">delete_forever</span>
+                                        Delete Manuscript
+                                    </button>
                                 </div>
 
                                 {/* Comments Section */}

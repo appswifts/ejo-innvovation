@@ -1,0 +1,14 @@
+{
+    "action": "initiate",
+    "amount": 600,
+    "currency": "RWF",
+    "ref_id": "TEST_CLI_003_RWF",
+    "ref_type": "test",
+    "customer": {
+        "email": "test@example.com",
+        "firstName": "Test",
+        "lastName": "User"
+    },
+    "redirect_url": "http://localhost:3000",
+    "back_url": "http://localhost:3000"
+}

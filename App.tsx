@@ -12,6 +12,10 @@ import ArticleView from './pages/Public/ArticleView';
 import BooksPage from './pages/Public/BooksPage';
 import BookReader from './pages/Public/BookReader';
 import CheckoutPage from './pages/Public/CheckoutPage';
+import AboutUs from './pages/Public/AboutUs';
+import ContactUs from './pages/Public/ContactUs';
+import PrivacyPolicy from './pages/Public/PrivacyPolicy';
+import Copyright from './pages/Public/Copyright';
 import SubmissionWizard from './pages/Dashboard/SubmissionWizard';
 // Dashboard Widgets
 import DashboardLayout from './components/DashboardLayout';
@@ -55,6 +59,10 @@ const App: React.FC = () => {
           <Route path="/books" element={<BooksPage />} />
           <Route path="/book/read/:id" element={<BookReader />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/copyright" element={<Copyright />} />
 
           {/* Dashboard Routes (Protected) */}
           <Route path="/dashboard" element={<DashboardLayout />}>

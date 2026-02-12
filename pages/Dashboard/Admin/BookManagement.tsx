@@ -34,10 +34,13 @@ const BookManagement: React.FC = () => {
     const isInternalUser = profile?.role?.slug === 'super_admin' || profile?.role?.slug === 'editor';
 
     // Form state
+    const [coverSource, setCoverSource] = useState<'url' | 'upload'>('url');
+    const [uploadingCover, setUploadingCover] = useState(false);
+
     const [formData, setFormData] = useState({
         title: '',
         author_name: '',
-        type: 'textbook',
+        type: 'scholarly',
         price: 0,
         royalty_percentage: 70,
         description: '',
@@ -82,7 +85,7 @@ const BookManagement: React.FC = () => {
             setFormData({
                 title: book.title,
                 author_name: book.author_name || '',
-                type: book.type || 'textbook',
+                type: book.type || 'scholarly',
                 price: book.price,
                 royalty_percentage: book.royalty_percentage,
                 description: book.description || '',
@@ -96,7 +99,7 @@ const BookManagement: React.FC = () => {
             setFormData({
                 title: '',
                 author_name: '',
-                type: 'textbook',
+                type: 'scholarly',
                 price: 0,
                 royalty_percentage: 70,
                 description: '',
@@ -295,6 +298,14 @@ const BookManagement: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
+                                                book.type === 'creative' ? 'bg-pink-100 text-pink-700' :
+                                                    'bg-amber-100 text-amber-700'
+                                            }`}>
+                                            {book.type === 'scholarly' ? 'Scholarly' : book.type === 'creative' ? 'Creative Content' : 'General Nonfiction'}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.status === 'approved' ? 'bg-green-100 text-green-700' :
                                             book.status === 'rejected' ? 'bg-red-100 text-red-700' :
                                                 'bg-yellow-100 text-yellow-700'
@@ -406,9 +417,9 @@ const BookManagement: React.FC = () => {
                                         value={formData.type}
                                         onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                     >
-                                        <option value="textbook">Textbook</option>
-                                        <option value="monograph">Monograph</option>
-                                        <option value="anthology">Anthology</option>
+                                        <option value="scholarly">Scholarly</option>
+                                        <option value="creative">Creative Content</option>
+                                        <option value="nonfiction">General Nonfiction</option>
                                     </select>
                                 </div>
                                 <div className="col-span-1">
@@ -434,14 +445,93 @@ const BookManagement: React.FC = () => {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cover Image URL</label>
-                                    <input
-                                        type="url"
-                                        className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                                        placeholder="https://..."
-                                        value={formData.cover_url}
-                                        onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
-                                    />
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Cover Image</label>
+                                        <div className="flex bg-slate-100 p-1 rounded-lg self-start sm:self-auto">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCoverSource('url')}
+                                                className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${coverSource === 'url' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                            >
+                                                External URL
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCoverSource('upload')}
+                                                className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider transition-all ${coverSource === 'upload' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}
+                                            >
+                                                Upload File
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {coverSource === 'url' ? (
+                                        <input
+                                            type="url"
+                                            className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+                                            placeholder="https://... (direct link to image)"
+                                            value={formData.cover_url}
+                                            onChange={(e) => setFormData({ ...formData, cover_url: e.target.value })}
+                                        />
+                                    ) : (
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    try {
+                                                        setUploadingCover(true);
+                                                        const fileExt = file.name.split('.').pop();
+                                                        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+                                                        const filePath = `covers/${fileName}`;
+
+                                                        const { error: uploadError } = await supabase.storage
+                                                            .from('book_covers')
+                                                            .upload(filePath, file);
+
+                                                        if (uploadError) throw uploadError;
+
+                                                        const { data: { publicUrl } } = supabase.storage
+                                                            .from('book_covers')
+                                                            .getPublicUrl(filePath);
+
+                                                        setFormData(prev => ({ ...prev, cover_url: publicUrl }));
+                                                        alert('Cover uploaded successfully!');
+                                                    } catch (error: any) {
+                                                        console.error('Cover upload error:', error);
+                                                        alert('Upload failed: ' + error.message);
+                                                    } finally {
+                                                        setUploadingCover(false);
+                                                    }
+                                                }}
+                                                className="hidden"
+                                                id="cover-upload"
+                                                disabled={uploadingCover}
+                                            />
+                                            <label
+                                                htmlFor="cover-upload"
+                                                className={`w-full p-4 flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer transition-all ${uploadingCover ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                <span className="material-symbols-outlined text-slate-400">
+                                                    {uploadingCover ? 'sync' : 'image'}
+                                                </span>
+                                                <span className="text-sm font-bold text-slate-600">
+                                                    {uploadingCover ? 'Uploading...' : formData.cover_url && formData.cover_url.includes('supabase.co') ? 'Cover Uploaded ✓ (Change)' : 'Choose Cover Image'}
+                                                </span>
+                                            </label>
+                                            {formData.cover_url && (
+                                                <div className="mt-3 flex items-center gap-3">
+                                                    <img src={formData.cover_url} alt="Cover preview" className="w-16 h-20 object-cover rounded-lg border border-slate-200" />
+                                                    <p className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                        Cover image ready
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="md:col-span-2">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">

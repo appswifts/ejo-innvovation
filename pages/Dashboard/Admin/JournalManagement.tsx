@@ -106,6 +106,19 @@ const JournalManagement: React.FC = () => {
         });
     };
 
+    const handleDelete = async (journal: Journal) => {
+        if (!window.confirm(`Are you sure you want to delete "${journal.title}"? Related articles and manuscripts will be unlinked (not deleted).`)) return;
+        try {
+            const { error } = await supabase.from('journals').delete().eq('id', journal.id);
+            if (error) throw error;
+            alert('Journal deleted successfully.');
+            await fetchJournals();
+        } catch (error: any) {
+            console.error('Error deleting journal:', error);
+            alert('Failed to delete journal: ' + error.message);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
@@ -135,7 +148,6 @@ const JournalManagement: React.FC = () => {
 
             await fetchJournals();
             handleClose();
-            // Ideally show success toast
         } catch (error: any) {
             console.error('Error saving journal:', error);
             alert('Failed to save journal: ' + error.message);
@@ -191,6 +203,13 @@ const JournalManagement: React.FC = () => {
                                         className="size-8 rounded-full bg-white/90 text-slate-700 flex items-center justify-center hover:bg-white hover:text-primary transition shadow-sm"
                                     >
                                         <span className="material-symbols-outlined text-sm">edit</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(journal)}
+                                        className="size-8 rounded-full bg-white/90 text-slate-700 flex items-center justify-center hover:bg-white hover:text-red-600 transition shadow-sm"
+                                        title="Delete Journal"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">delete</span>
                                     </button>
                                 </div>
                                 {journal.is_open_access && (
