@@ -16,6 +16,7 @@ import AboutUs from './pages/Public/AboutUs';
 import ContactUs from './pages/Public/ContactUs';
 import PrivacyPolicy from './pages/Public/PrivacyPolicy';
 import Copyright from './pages/Public/Copyright';
+import BookGuidelines from './pages/Public/BookGuidelines';
 import SubmissionWizard from './pages/Dashboard/SubmissionWizard';
 // Dashboard Widgets
 import DashboardLayout from './components/DashboardLayout';
@@ -64,6 +65,7 @@ const App: React.FC = () => {
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/copyright" element={<Copyright />} />
+          <Route path="/book-guidelines" element={<BookGuidelines />} />
 
           {/* Dashboard Routes (Protected) */}
           <Route path="/dashboard" element={<DashboardLayout />}>

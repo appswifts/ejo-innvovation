@@ -133,6 +133,14 @@ const BooksPage: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            <a
+              href="/book-guidelines"
+              className="mt-8 flex items-center gap-3 p-3 rounded-xl text-primary hover:bg-primary/5 transition-all group"
+            >
+              <span className="material-symbols-outlined text-lg">description</span>
+              <span className="text-sm font-bold group-hover:underline">Publication Guidelines</span>
+            </a>
           </div>
         </aside>
 
@@ -281,8 +289,8 @@ const BooksPage: React.FC = () => {
                       <span className="material-symbols-outlined">close</span>
                     </button>
                     <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 ${selectedBook.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
-                        selectedBook.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
-                          'bg-amber-100 text-amber-700'
+                      selectedBook.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                        'bg-amber-100 text-amber-700'
                       }`}>
                       {BOOK_TYPES.find(t => t.value === selectedBook.type)?.label || selectedBook.type}
                     </span>
