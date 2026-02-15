@@ -17,6 +17,11 @@ interface Book {
   pdf_url: string | null;
 }
 
+/** Strip any HTML tags from user-submitted text to prevent XSS */
+const sanitizeText = (text: string): string => {
+  return text.replace(/<[^>]*>/g, '').trim();
+};
+
 const BooksPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -25,6 +30,7 @@ const BooksPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
 
   useEffect(() => {
     fetchBooks();
@@ -157,7 +163,7 @@ const BooksPage: React.FC = () => {
                 const isPurchased = purchasedBookIds.has(book.id);
                 return (
                   <div key={book.id} className="group bg-white rounded-3xl overflow-hidden border border-slate-100/80 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col">
-                    <div className="relative aspect-[4/5] overflow-hidden bg-slate-50">
+                    <div className="relative aspect-[4/5] overflow-hidden bg-slate-50 cursor-pointer" onClick={() => setSelectedBook(book)}>
                       {book.cover_url ? (
                         <img
                           src={book.cover_url}
@@ -172,21 +178,27 @@ const BooksPage: React.FC = () => {
                       )}
                       <div className="absolute top-4 left-4 flex flex-col gap-2">
                         <span className="bg-white/95 backdrop-blur-md text-slate-900 text-[10px] font-black px-3.5 py-1.5 rounded-full shadow-xl border border-white/20 uppercase tracking-wider">
-                          {book.type}
+                          {BOOK_TYPES.find(t => t.value === book.type)?.label || book.type}
                         </span>
                       </div>
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[2px]">
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center gap-3 backdrop-blur-[2px]">
                         <button
-                          onClick={() => isPurchased ? navigate(`/book/read/${book.id}`) : handlePurchase(book)}
-                          className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 hover:bg-primary hover:text-white transition-colors"
+                          onClick={(e) => { e.stopPropagation(); setSelectedBook(book); }}
+                          className="bg-white text-slate-900 px-5 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 hover:bg-slate-100"
                         >
-                          {isPurchased ? 'Read Now' : 'Unlock Access'} <span className="material-symbols-outlined text-sm">{isPurchased ? 'menu_book' : 'payments'}</span>
+                          <span className="material-symbols-outlined text-sm">visibility</span> View
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); isPurchased ? navigate(`/book/read/${book.id}`) : handlePurchase(book); }}
+                          className="bg-primary text-white px-5 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75 hover:bg-primary/90"
+                        >
+                          {isPurchased ? 'Read' : 'Buy'} <span className="material-symbols-outlined text-sm">{isPurchased ? 'menu_book' : 'payments'}</span>
                         </button>
                       </div>
                     </div>
-                    <div className="p-6 flex flex-col flex-1">
-                      <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors cursor-pointer">
+                    <div className="p-6 flex flex-col flex-1 cursor-pointer" onClick={() => setSelectedBook(book)}>
+                      <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors">
                         {book.title}
                       </h3>
                       <p className="text-xs font-bold text-slate-400 mb-6 flex items-center gap-2">
@@ -201,7 +213,7 @@ const BooksPage: React.FC = () => {
                         </div>
                         {isPurchased ? (
                           <button
-                            onClick={() => navigate(`/book/read/${book.id}`)}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/book/read/${book.id}`); }}
                             className="h-12 px-4 bg-emerald-500 text-white rounded-2xl flex items-center gap-2 hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-500/20 active:scale-90"
                           >
                             <span className="material-symbols-outlined text-lg">verified</span>
@@ -209,7 +221,7 @@ const BooksPage: React.FC = () => {
                           </button>
                         ) : (
                           <button
-                            onClick={() => handlePurchase(book)}
+                            onClick={(e) => { e.stopPropagation(); handlePurchase(book); }}
                             className="h-12 w-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-primary transition-all shadow-xl shadow-slate-900/10 active:scale-90 group-hover:rotate-6"
                           >
                             <span className="material-symbols-outlined text-2xl font-bold">add_shopping_cart</span>
@@ -240,6 +252,93 @@ const BooksPage: React.FC = () => {
           )}
         </section>
       </main>
+
+      {/* Book Preview Modal */}
+      {selectedBook && (() => {
+        const isPurchased = purchasedBookIds.has(selectedBook.id);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedBook(null)}>
+            <div
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="relative">
+                <div className="flex flex-col sm:flex-row">
+                  {/* Cover */}
+                  <div className="sm:w-56 w-full h-56 sm:h-auto bg-slate-100 flex-shrink-0">
+                    {selectedBook.cover_url ? (
+                      <img src={selectedBook.cover_url} alt={selectedBook.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 text-slate-200">
+                        <span className="material-symbols-outlined text-6xl">auto_stories</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 p-6 sm:p-8">
+                    <button onClick={() => setSelectedBook(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 ${selectedBook.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
+                        selectedBook.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                          'bg-amber-100 text-amber-700'
+                      }`}>
+                      {BOOK_TYPES.find(t => t.value === selectedBook.type)?.label || selectedBook.type}
+                    </span>
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight mb-2">{selectedBook.title}</h2>
+                    <p className="text-sm text-slate-500 font-medium flex items-center gap-2 mb-4">
+                      <span className="material-symbols-outlined text-sm text-slate-400">person</span>
+                      {selectedBook.author_name || 'Academic Board'}
+                    </p>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-slate-900">${selectedBook.price}</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase">USD</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description — rendered as sanitized plain text */}
+              <div className="px-6 sm:px-8 pb-2 max-h-48 overflow-y-auto">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">About This Book</h3>
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                  {selectedBook.description ? sanitizeText(selectedBook.description) : 'No description available for this publication.'}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 sm:p-8 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setSelectedBook(null)}
+                  className="flex-1 px-6 py-3.5 border border-slate-200 text-slate-600 font-bold text-sm rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">arrow_back</span>
+                  Back to Library
+                </button>
+                {isPurchased ? (
+                  <button
+                    onClick={() => { setSelectedBook(null); navigate(`/book/read/${selectedBook.id}`); }}
+                    className="flex-[2] px-6 py-3.5 bg-emerald-500 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">menu_book</span>
+                    Read Now — You Own This
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setSelectedBook(null); handlePurchase(selectedBook); }}
+                    className="flex-[2] px-6 py-3.5 bg-gradient-to-r from-primary to-primary/90 text-white font-bold text-sm rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-sm">shopping_cart</span>
+                    Purchase for ${selectedBook.price}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <Footer />
     </div>
   );
