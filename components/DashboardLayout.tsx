@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 const DashboardLayout: React.FC = () => {
     const { user, profile, signOut } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [fabOpen, setFabOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -142,8 +143,45 @@ const DashboardLayout: React.FC = () => {
                     />
                 </header>
 
-                <main className="flex-1 overflow-auto p-0 bg-slate-50">
+                <main className="flex-1 overflow-auto p-0 bg-slate-50 relative">
                     <Outlet />
+
+                    {/* Floating Action Button for Public Site Navigation */}
+                    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+                        {fabOpen && (
+                            <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-5 fade-in duration-200">
+                                {[
+                                    { label: 'Contact', icon: 'contact_support', path: '/contact' },
+                                    { label: 'About Us', icon: 'info', path: '/about' },
+                                    { label: 'Books', icon: 'book_2', path: '/books' },
+                                    { label: 'Journals', icon: 'article', path: '/journals' },
+                                    { label: 'Home', icon: 'home', path: '/' },
+                                ].map((link, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            navigate(link.path);
+                                            setFabOpen(false);
+                                        }}
+                                        className="flex items-center gap-3 bg-white text-slate-700 px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-slate-50 hover:text-primary transition-all whitespace-nowrap"
+                                    >
+                                        <span className="text-sm font-bold">{link.label}</span>
+                                        <span className="material-symbols-outlined text-xl">{link.icon}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setFabOpen(!fabOpen)}
+                            className={`w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 ${fabOpen ? 'bg-slate-900 rotate-45' : 'bg-primary hover:bg-primary-dark hover:scale-110'
+                                } text-white`}
+                            title="Navigate to Public Site"
+                        >
+                            <span className="material-symbols-outlined text-2xl">
+                                {fabOpen ? 'add' : 'public'}
+                            </span>
+                        </button>
+                    </div>
                 </main>
             </div>
         </div>
