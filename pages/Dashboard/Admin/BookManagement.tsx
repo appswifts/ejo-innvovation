@@ -209,10 +209,11 @@ const BookManagement: React.FC = () => {
 
         try {
             setSaving(true);
-            const { error } = await supabase
-                .from('books')
-                .delete()
-                .eq('id', bookId);
+
+            // Call the RPC to safely delete book and unlink transactions
+            const { error } = await supabase.rpc('delete_book_safely', {
+                p_book_id: bookId
+            });
 
             if (error) throw error;
             alert('Book deleted successfully!');
@@ -299,8 +300,8 @@ const BookManagement: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
-                                                book.type === 'creative' ? 'bg-pink-100 text-pink-700' :
-                                                    'bg-amber-100 text-amber-700'
+                                            book.type === 'creative' ? 'bg-pink-100 text-pink-700' :
+                                                'bg-amber-100 text-amber-700'
                                             }`}>
                                             {book.type === 'scholarly' ? 'Scholarly' : book.type === 'creative' ? 'Creative Content' : 'General Nonfiction'}
                                         </span>
