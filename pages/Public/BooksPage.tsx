@@ -102,7 +102,7 @@ const BooksPage: React.FC = () => {
         <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-slate-100 p-8 space-y-8 bg-slate-50/30 md:sticky md:top-[65px] md:h-[calc(100vh-65px)] overflow-y-auto">
           <div>
             <h1 className="text-3xl font-black text-slate-900 tracking-tight mb-3">Library</h1>
-            <p className="text-sm text-slate-500 mb-10 font-medium leading-relaxed">Discover peer-reviewed monographs and scholarly textbooks from our contributors.</p>
+            <p className="text-sm text-slate-500 mb-10 font-medium leading-relaxed">Discover scholarly works, creative content, and general nonfiction from our contributors.</p>
 
             <div className="relative mb-10">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
@@ -288,8 +288,8 @@ const BooksPage: React.FC = () => {
                     <button onClick={() => setSelectedBook(null)} className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
                       <span className="material-symbols-outlined">close</span>
                     </button>
-                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 ${selectedBook.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
-                      selectedBook.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider mb-4 ${selectedBook.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
+                      selectedBook.type === 'creative_content' ? 'bg-pink-100 text-pink-700' :
                         'bg-amber-100 text-amber-700'
                       }`}>
                       {BOOK_TYPES.find(t => t.value === selectedBook.type)?.label || selectedBook.type}

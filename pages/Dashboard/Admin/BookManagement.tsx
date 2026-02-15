@@ -300,8 +300,8 @@ const BookManagement: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
-                                            book.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
+                                            book.type === 'creative_content' ? 'bg-pink-100 text-pink-700' :
                                                 'bg-amber-100 text-amber-700'
                                             }`}>
                                             {BOOK_TYPES.find(t => t.value === book.type)?.label || book.type}

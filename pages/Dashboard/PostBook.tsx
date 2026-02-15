@@ -328,8 +328,8 @@ const PostBook: React.FC = () => {
                                 <div className="flex-1">
                                     <p className="font-bold text-slate-900">{formData.title}</p>
                                     <p className="text-sm text-slate-500">by {formData.author_name}</p>
-                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${formData.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
-                                        formData.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${formData.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
+                                        formData.type === 'creative_content' ? 'bg-pink-100 text-pink-700' :
                                             'bg-amber-100 text-amber-700'
                                         }`}>
                                         {BOOK_TYPES.find(t => t.value === formData.type)?.label || formData.type}

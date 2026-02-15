@@ -69,7 +69,7 @@ const BookGuidelines: React.FC = () => {
                                 { icon: 'payments', text: 'Submission Fee: 172 USD (or equivalent in Rwandan Francs).' },
                                 { icon: 'description', text: 'Maximum Length: 60 pages.' },
                                 { icon: 'add_circle', text: 'If the author wishes to publish more than 60 pages, additional review fees will apply for the extra pages, based on the current review rate charged by Nkiza Center for Research.' },
-                                { icon: 'translate', text: 'Manuscripts must be written in clear, professional English.' },
+                                { icon: 'translate', text: 'Manuscripts must be written in clear, professional English, French, or Kinyarwanda.' },
                                 { icon: 'format_quote', text: 'Proper referencing is mandatory (APA latest edition unless otherwise specified).' },
                                 { icon: 'article', text: 'A structured format is required (Abstract/Preface, Introduction, Literature Review or Conceptual Framework, Core Chapters, Conclusion, References, and Appendix where necessary).' },
                             ].map((item, i) => (
@@ -147,7 +147,7 @@ const BookGuidelines: React.FC = () => {
                                 { icon: 'payments', text: 'Submission Fee: 172 USD (or equivalent in Rwandan Francs).' },
                                 { icon: 'description', text: 'Maximum Length: 60 pages.' },
                                 { icon: 'add_circle', text: 'If the author wishes to publish more than 60 pages, additional review fees will apply for the extra pages, based on the current rate charged.' },
-                                { icon: 'edit_note', text: 'Manuscripts must be professionally written and carefully proofread.' },
+                                { icon: 'edit_note', text: 'Manuscripts must be professionally written in English, French, or Kinyarwanda and carefully proofread.' },
                                 { icon: 'format_quote', text: 'Proper acknowledgment of sources is required where applicable.' },
                             ].map((item, i) => (
                                 <div key={i} className="flex gap-3 items-start">
