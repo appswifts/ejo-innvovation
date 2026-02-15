@@ -89,3 +89,11 @@ export interface Manuscript {
   price?: number;
   currency?: string;
 }
+
+export type BookType = 'monograph' | 'textbook' | 'anthology';
+
+export const BOOK_TYPES: { label: string; value: BookType; icon: string }[] = [
+  { label: 'Monograph', value: 'monograph', icon: 'menu_book' },
+  { label: 'Textbook', value: 'textbook', icon: 'school' },
+  { label: 'Anthology', value: 'anthology', icon: 'library_books' },
+];

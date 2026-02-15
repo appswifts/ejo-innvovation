@@ -308,14 +308,14 @@ const JournalManagement: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Editor Team</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Editorial Team</label>
                             <input
                                 name="editor_in_chief_name"
                                 type="text"
                                 value={formData.editor_in_chief_name}
                                 onChange={handleChange}
                                 className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                placeholder="Name of the Editor Team"
+                                placeholder="Name of the Editorial Team"
                             />
                         </div>
 

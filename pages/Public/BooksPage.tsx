@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState } from '../../types';
+import { ViewState, BOOK_TYPES } from '../../types';
 import TopNav from '../../components/TopNav';
 import Footer from '../../components/Footer';
 import { supabase } from '../../lib/supabaseClient';
@@ -113,9 +113,7 @@ const BooksPage: React.FC = () => {
             <div className="space-y-1.5">
               {[
                 { label: 'All Publications', value: 'all', icon: 'auto_stories' },
-                { label: 'Monographs', value: 'monograph', icon: 'menu_book' },
-                { label: 'Textbooks', value: 'textbook', icon: 'school' },
-                { label: 'Anthologies', value: 'anthology', icon: 'library_books' }
+                ...BOOK_TYPES
               ].map((cat) => (
                 <button
                   key={cat.value}

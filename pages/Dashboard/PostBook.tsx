@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { BOOK_TYPES, BookType } from '../../types';
 
 type Step = 'details' | 'files' | 'payment' | 'complete';
 
@@ -21,7 +22,7 @@ const PostBook: React.FC = () => {
         title: '',
         author_name: '',
         description: '',
-        type: 'scholarly',
+        type: BOOK_TYPES[0].value,
         price: 0,
         cover_url: '',
         pdf_url: '',
@@ -149,8 +150,8 @@ const PostBook: React.FC = () => {
                         return (
                             <React.Fragment key={s.key}>
                                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${isActive ? 'bg-primary text-white shadow-md' :
-                                        isComplete ? 'bg-emerald-100 text-emerald-700' :
-                                            'bg-slate-100 text-slate-400'
+                                    isComplete ? 'bg-emerald-100 text-emerald-700' :
+                                        'bg-slate-100 text-slate-400'
                                     }`}>
                                     <span className="material-symbols-outlined text-lg">{isComplete ? 'check_circle' : s.icon}</span>
                                     <span className="text-xs font-bold hidden sm:block">{s.label}</span>
@@ -196,12 +197,12 @@ const PostBook: React.FC = () => {
                                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Book Type <span className="text-red-500">*</span></label>
                                     <select
                                         value={formData.type}
-                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value as BookType })}
                                         className="w-full p-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm appearance-none"
                                     >
-                                        <option value="scholarly">Scholarly</option>
-                                        <option value="creative">Creative Content</option>
-                                        <option value="nonfiction">General Nonfiction</option>
+                                        {BOOK_TYPES.map(type => (
+                                            <option key={type.value} value={type.value}>{type.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
@@ -327,11 +328,11 @@ const PostBook: React.FC = () => {
                                 <div className="flex-1">
                                     <p className="font-bold text-slate-900">{formData.title}</p>
                                     <p className="text-sm text-slate-500">by {formData.author_name}</p>
-                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${formData.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
-                                            formData.type === 'creative' ? 'bg-pink-100 text-pink-700' :
-                                                'bg-amber-100 text-amber-700'
+                                    <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${formData.type === 'monograph' ? 'bg-indigo-100 text-indigo-700' :
+                                        formData.type === 'textbook' ? 'bg-pink-100 text-pink-700' :
+                                            'bg-amber-100 text-amber-700'
                                         }`}>
-                                        {formData.type === 'scholarly' ? 'Scholarly' : formData.type === 'creative' ? 'Creative Content' : 'General Nonfiction'}
+                                        {BOOK_TYPES.find(t => t.value === formData.type)?.label || formData.type}
                                     </span>
                                 </div>
                             </div>
@@ -421,7 +422,7 @@ const PostBook: React.FC = () => {
                             <button
                                 onClick={() => {
                                     setStep('details');
-                                    setFormData({ title: '', author_name: '', description: '', type: 'scholarly', price: 0, cover_url: '', pdf_url: '' });
+                                    setFormData({ title: '', author_name: '', description: '', type: BOOK_TYPES[0].value, price: 0, cover_url: '', pdf_url: '' });
                                 }}
                                 className="px-6 py-3 bg-primary text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl transition-all flex items-center gap-2"
                             >
