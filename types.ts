@@ -89,3 +89,11 @@ export interface Manuscript {
   price?: number;
   currency?: string;
 }
+
+export type BookType = 'scholarly' | 'creative_content' | 'general_nonfiction';
+
+export const BOOK_TYPES: { label: string; value: BookType; icon: string }[] = [
+  { label: 'Scholarly', value: 'scholarly', icon: 'school' },
+  { label: 'Creative Content', value: 'creative_content', icon: 'auto_stories' },
+  { label: 'General Nonfiction', value: 'general_nonfiction', icon: 'menu_book' },
+];

@@ -419,14 +419,14 @@ const JournalDetail: React.FC = () => {
               )}
 
               <div className="bg-primary/5 rounded-2xl p-8 border border-primary/20">
-                <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editor Team</h3>
+                <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editorial Team</h3>
                 <div className="flex gap-4 items-center mb-4">
                   {/* <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md">
                                         <img alt={journal.editor_in_chief_name || 'Editor'} className="w-full h-full object-cover" src="https://via.placeholder.com/150" />
                                     </div> */}
                   <div>
                     <h4 className="font-bold text-slate-900">{journal.editor_in_chief_name || 'Not Assigned'}</h4>
-                    <p className="text-primary font-semibold text-xs">Editor Team</p>
+                    <p className="text-primary font-semibold text-xs">Editorial Team</p>
                   </div>
                 </div>
                 <p className="text-slate-600 text-sm leading-relaxed">

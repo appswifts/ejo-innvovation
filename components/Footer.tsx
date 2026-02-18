@@ -42,6 +42,7 @@ const Footer: React.FC = () => {
                         <ul className="space-y-4 text-sm text-gray-400">
                             <li><button onClick={() => navigate('/dashboard/submit')} className="hover:text-white transition-colors">Submission Portal</button></li>
                             <li><button onClick={() => navigate('/dashboard/post-book')} className="hover:text-white transition-colors">Post a Book</button></li>
+                            <li><button onClick={() => navigate('/book-guidelines')} className="hover:text-white transition-colors">Book Guidelines</button></li>
                             <li><button onClick={() => navigate('/privacy')} className="hover:text-white transition-colors">Privacy Policy</button></li>
                             <li><button onClick={() => navigate('/copyright')} className="hover:text-white transition-colors">Copyright & Terms</button></li>
                         </ul>

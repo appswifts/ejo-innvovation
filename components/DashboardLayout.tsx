@@ -6,19 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 const DashboardLayout: React.FC = () => {
     const { user, profile, signOut } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
-    const [quickNavOpen, setQuickNavOpen] = useState(false);
+    const [fabOpen, setFabOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
     if (!user || !profile) return null;
 
-    const quickLinks = [
-        { label: 'Home', icon: 'home', path: '/' },
-        { label: 'Journals', icon: 'menu_book', path: '/journals' },
-        { label: 'Books', icon: 'library_books', path: '/books' },
-        { label: 'Partners', icon: 'handshake', path: '/partners' },
-        { label: 'About Us', icon: 'info', path: '/about' },
-    ];
+
 
     // Define menu items based on roles
     const getMenuItems = () => {
@@ -153,46 +147,46 @@ const DashboardLayout: React.FC = () => {
                     />
                 </header>
 
-                <main className="flex-1 overflow-auto p-0 bg-slate-50">
+                <main className="flex-1 overflow-auto p-0 bg-slate-50 relative">
                     <Outlet />
-                </main>
 
-                {/* Quick Navigation FAB */}
-                <div className="fixed bottom-8 right-8 z-[60] flex flex-col items-end gap-3">
-                    {quickNavOpen && (
-                        <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                            {quickLinks.map((link, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => {
-                                        navigate(link.path);
-                                        setQuickNavOpen(false);
-                                    }}
-                                    className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all group scale-95 hover:scale-100 origin-right"
-                                    style={{ transitionDelay: `${(quickLinks.length - 1 - idx) * 50}ms` }}
-                                >
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{link.label}</span>
-                                    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                    {/* Floating Action Button for Public Site Navigation */}
+                    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-3">
+                        {fabOpen && (
+                            <div className="flex flex-col gap-2 animate-in slide-in-from-bottom-5 fade-in duration-200">
+                                {[
+                                    { label: 'Contact', icon: 'contact_support', path: '/contact' },
+                                    { label: 'About Us', icon: 'info', path: '/about' },
+                                    { label: 'Books', icon: 'book_2', path: '/books' },
+                                    { label: 'Journals', icon: 'article', path: '/journals' },
+                                    { label: 'Home', icon: 'home', path: '/' },
+                                ].map((link, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            navigate(link.path);
+                                            setFabOpen(false);
+                                        }}
+                                        className="flex items-center gap-3 bg-white text-slate-700 px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-slate-50 hover:text-primary transition-all whitespace-nowrap"
+                                    >
+                                        <span className="text-sm font-bold">{link.label}</span>
                                         <span className="material-symbols-outlined text-xl">{link.icon}</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    <button
-                        onClick={() => setQuickNavOpen(!quickNavOpen)}
-                        className={`size-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 transform ${quickNavOpen
-                            ? 'bg-slate-900 text-white rotate-45 scale-90'
-                            : 'bg-primary text-white hover:scale-110 hover:shadow-primary/30'
-                            }`}
-                        title="Quick Navigation"
-                    >
-                        <span className="material-symbols-outlined text-3xl">
-                            {quickNavOpen ? 'close' : 'explore'}
-                        </span>
-                    </button>
-                </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        <button
+                            onClick={() => setFabOpen(!fabOpen)}
+                            className={`w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 ${fabOpen ? 'bg-slate-900 rotate-45' : 'bg-primary hover:bg-primary-dark hover:scale-110'
+                                } text-white`}
+                            title="Navigate to Public Site"
+                        >
+                            <span className="material-symbols-outlined text-2xl">
+                                {fabOpen ? 'add' : 'public'}
+                            </span>
+                        </button>
+                    </div>
+                </main>
             </div>
         </div>
     );

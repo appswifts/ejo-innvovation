@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { BOOK_TYPES, BookType } from '../../../types';
 
 interface Book {
     id: string;
@@ -40,7 +41,7 @@ const BookManagement: React.FC = () => {
     const [formData, setFormData] = useState({
         title: '',
         author_name: '',
-        type: 'scholarly',
+        type: BOOK_TYPES[0].value,
         price: 0,
         royalty_percentage: 70,
         description: '',
@@ -85,7 +86,7 @@ const BookManagement: React.FC = () => {
             setFormData({
                 title: book.title,
                 author_name: book.author_name || '',
-                type: book.type || 'scholarly',
+                type: (book.type || BOOK_TYPES[0].value) as BookType,
                 price: book.price,
                 royalty_percentage: book.royalty_percentage,
                 description: book.description || '',
@@ -99,7 +100,7 @@ const BookManagement: React.FC = () => {
             setFormData({
                 title: '',
                 author_name: '',
-                type: 'scholarly',
+                type: BOOK_TYPES[0].value,
                 price: 0,
                 royalty_percentage: 70,
                 description: '',
@@ -209,10 +210,11 @@ const BookManagement: React.FC = () => {
 
         try {
             setSaving(true);
-            const { error } = await supabase
-                .from('books')
-                .delete()
-                .eq('id', bookId);
+
+            // Call the RPC to safely delete book and unlink transactions
+            const { error } = await supabase.rpc('delete_book_safely', {
+                p_book_id: bookId
+            });
 
             if (error) throw error;
             alert('Book deleted successfully!');
@@ -299,10 +301,10 @@ const BookManagement: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${book.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
-                                            book.type === 'creative' ? 'bg-pink-100 text-pink-700' :
+                                            book.type === 'creative_content' ? 'bg-pink-100 text-pink-700' :
                                                 'bg-amber-100 text-amber-700'
                                             }`}>
-                                            {book.type === 'scholarly' ? 'Scholarly' : book.type === 'creative' ? 'Creative Content' : 'General Nonfiction'}
+                                            {BOOK_TYPES.find(t => t.value === book.type)?.label || book.type}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -415,11 +417,11 @@ const BookManagement: React.FC = () => {
                                     <select
                                         className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm appearance-none"
                                         value={formData.type}
-                                        onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, type: e.target.value as BookType })}
                                     >
-                                        <option value="scholarly">Scholarly</option>
-                                        <option value="creative">Creative Content</option>
-                                        <option value="nonfiction">General Nonfiction</option>
+                                        {BOOK_TYPES.map(type => (
+                                            <option key={type.value} value={type.value}>{type.label}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="col-span-1">
