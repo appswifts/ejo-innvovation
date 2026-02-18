@@ -33,6 +33,9 @@ import AdminApplications from './pages/Dashboard/Admin/Applications';
 import Applications from './pages/Dashboard/Reader/Applications';
 import UserApplications from './pages/Dashboard/Reader/UserApplications';
 import PostBook from './pages/Dashboard/PostBook';
+import PartnerManagement from './pages/Dashboard/Admin/PartnerManagement';
+import SiteSettings from './pages/Dashboard/Admin/SiteSettings';
+import PartnersPage from './pages/Public/PartnersPage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -64,6 +67,7 @@ const App: React.FC = () => {
           <Route path="/contact" element={<ContactUs />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/copyright" element={<Copyright />} />
+          <Route path="/partners" element={<PartnersPage />} />
 
           {/* Dashboard Routes (Protected) */}
           <Route path="/dashboard" element={<DashboardLayout />}>
@@ -76,6 +80,8 @@ const App: React.FC = () => {
             <Route path="admin/journals" element={<JournalManagement />} />
             <Route path="admin/applications" element={<AdminApplications />} /> {/* Admin Review */}
             <Route path="admin/books" element={<BookManagement />} />
+            <Route path="admin/partners" element={<PartnerManagement />} />
+            <Route path="admin/settings" element={<SiteSettings />} />
 
             {/* Author Routes */}
             <Route path="submit" element={<SubmissionWizard />} />

@@ -79,11 +79,39 @@ const BooksPage: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const handlePurchase = (book: Book) => {
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const handlePurchase = async (book: Book) => {
     if (!user) {
       navigate('/login');
       return;
     }
+
+    // Free book — grant access immediately
+    if (book.price <= 0) {
+      setClaimingId(book.id);
+      try {
+        const { error } = await supabase.from('transactions').insert({
+          user_id: user.id,
+          book_id: book.id,
+          amount: 0,
+          currency: 'USD',
+          type: 'purchase',
+          status: 'completed',
+          description: `Free access: ${book.title}`,
+          payment_gateway: 'free',
+        });
+        if (error) throw error;
+        setPurchasedBookIds(prev => new Set([...prev, book.id]));
+      } catch (err: any) {
+        console.error('Error claiming free book:', err);
+        alert('Failed to claim book: ' + err.message);
+      } finally {
+        setClaimingId(null);
+      }
+      return;
+    }
+
     navigate(`/checkout?type=book&id=${book.id}`);
   };
 
@@ -113,9 +141,9 @@ const BooksPage: React.FC = () => {
             <div className="space-y-1.5">
               {[
                 { label: 'All Publications', value: 'all', icon: 'auto_stories' },
-                { label: 'Monographs', value: 'monograph', icon: 'menu_book' },
-                { label: 'Textbooks', value: 'textbook', icon: 'school' },
-                { label: 'Anthologies', value: 'anthology', icon: 'library_books' }
+                { label: 'Scholarly', value: 'scholarly', icon: 'school' },
+                { label: 'Creative Content', value: 'creative', icon: 'menu_book' },
+                { label: 'General Nonfiction', value: 'nonfiction', icon: 'library_books' }
               ].map((cat) => (
                 <button
                   key={cat.value}
@@ -181,9 +209,10 @@ const BooksPage: React.FC = () => {
                       <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center backdrop-blur-[2px]">
                         <button
                           onClick={() => isPurchased ? navigate(`/book/read/${book.id}`) : handlePurchase(book)}
-                          className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 hover:bg-primary hover:text-white transition-colors"
+                          disabled={claimingId === book.id}
+                          className="bg-white text-slate-900 px-6 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 hover:bg-primary hover:text-white transition-colors disabled:opacity-70"
                         >
-                          {isPurchased ? 'Read Now' : 'Unlock Access'} <span className="material-symbols-outlined text-sm">{isPurchased ? 'menu_book' : 'payments'}</span>
+                          {claimingId === book.id ? 'Claiming...' : isPurchased ? 'Read Now' : book.price <= 0 ? 'Get Free Access' : 'Unlock Access'} <span className="material-symbols-outlined text-sm">{isPurchased ? 'menu_book' : book.price <= 0 ? 'lock_open' : 'payments'}</span>
                         </button>
                       </div>
                     </div>
@@ -199,7 +228,7 @@ const BooksPage: React.FC = () => {
                       <div className="mt-auto flex items-center justify-between pt-5 border-t border-slate-50">
                         <div>
                           <span className="text-[10px] font-black text-slate-300 block uppercase tracking-[0.15em] mb-0.5">Price</span>
-                          <span className="text-xl font-black text-slate-900 tracking-tight">${book.price}</span>
+                          <span className="text-xl font-black text-slate-900 tracking-tight">{book.price <= 0 ? 'Free' : `$${book.price}`}</span>
                         </div>
                         {isPurchased ? (
                           <button
@@ -212,9 +241,16 @@ const BooksPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => handlePurchase(book)}
-                            className="h-12 w-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-primary transition-all shadow-xl shadow-slate-900/10 active:scale-90 group-hover:rotate-6"
+                            disabled={claimingId === book.id}
+                            className="h-12 px-4 bg-slate-900 text-white rounded-2xl flex items-center justify-center gap-2 hover:bg-primary transition-all shadow-xl shadow-slate-900/10 active:scale-90 group-hover:rotate-6 disabled:opacity-70"
                           >
-                            <span className="material-symbols-outlined text-2xl font-bold">add_shopping_cart</span>
+                            {claimingId === book.id ? (
+                              <span className="material-symbols-outlined text-xl animate-spin">progress_activity</span>
+                            ) : book.price <= 0 ? (
+                              <><span className="material-symbols-outlined text-xl">lock_open</span><span className="text-xs font-black">Free</span></>
+                            ) : (
+                              <span className="material-symbols-outlined text-2xl font-bold">add_shopping_cart</span>
+                            )}
                           </button>
                         )}
                       </div>

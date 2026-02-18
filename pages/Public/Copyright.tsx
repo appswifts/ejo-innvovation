@@ -22,7 +22,7 @@ const Copyright: React.FC = () => {
             <section className="py-16 px-6 max-w-4xl mx-auto">
                 <div className="prose prose-slate max-w-none">
                     <p className="text-slate-600 leading-relaxed mb-10 text-lg">
-                        All content published on the Nkiza Center platform is protected by copyright law.
+                        All content published on the Nkiza Center for Research platform is protected by copyright law.
                         This page outlines the rights of authors, the platform, and users regarding published works.
                     </p>
 
@@ -35,11 +35,11 @@ const Copyright: React.FC = () => {
                         <ul className="space-y-3 text-sm text-slate-600">
                             <li className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-primary text-sm mt-0.5">check</span>
-                                <span>Authors retain full copyright ownership of their original works (articles, books, creative content) published through Nkiza Center.</span>
+                                <span>Authors retain full copyright ownership of their original works (articles, books, creative content) published through Nkiza Center for Research.</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-primary text-sm mt-0.5">check</span>
-                                <span>By submitting work, authors grant Nkiza Center a non-exclusive license to publish, distribute, and display the work on its platform.</span>
+                                <span>By submitting work, authors grant Nkiza Center for Research a non-exclusive license to publish, distribute, and display the work on its platform.</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-primary text-sm mt-0.5">check</span>
@@ -61,7 +61,7 @@ const Copyright: React.FC = () => {
                         <ul className="space-y-3 text-sm text-slate-600">
                             <li className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-emerald-600 text-sm mt-0.5">check</span>
-                                <span>Nkiza Center owns the platform design, branding, logos, and proprietary technology.</span>
+                                <span>Nkiza Center for Research owns the platform design, branding, logos, and proprietary technology.</span>
                             </li>
                             <li className="flex items-start gap-2">
                                 <span className="material-symbols-outlined text-emerald-600 text-sm mt-0.5">check</span>

@@ -119,6 +119,24 @@ const FinanceDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteOrder = async (id: string) => {
+    try {
+      if (!window.confirm('Are you sure you want to permanently delete this transaction? This action cannot be undone.')) return;
+
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setOrders(orders.filter(order => order.id !== id));
+    } catch (error: any) {
+      console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction: ' + error.message);
+    }
+  };
+
   const handleEdit = (pkg: Package) => {
     setSelectedPackage(pkg);
     setFormData({
@@ -310,13 +328,14 @@ const FinanceDashboard: React.FC = () => {
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Description</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Amount</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {ordersLoading ? (
-                      <tr><td colSpan={5} className="p-8 text-center text-slate-500">Loading...</td></tr>
+                      <tr><td colSpan={7} className="p-8 text-center text-slate-500">Loading...</td></tr>
                     ) : orders.length === 0 ? (
-                      <tr><td colSpan={5} className="p-8 text-center text-slate-500">No transactions found.</td></tr>
+                      <tr><td colSpan={7} className="p-8 text-center text-slate-500">No transactions found.</td></tr>
                     ) : (
                       orders.map(order => (
                         <tr key={order.id} className="hover:bg-slate-50 transition-colors">
@@ -355,6 +374,15 @@ const FinanceDashboard: React.FC = () => {
                               <option value="completed">COMPLETED</option>
                               <option value="failed">FAILED</option>
                             </select>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              onClick={() => handleDeleteOrder(order.id)}
+                              className="text-red-500 hover:bg-red-50 p-2 rounded-full transition-colors"
+                              title="Delete transaction"
+                            >
+                              <span className="material-symbols-outlined text-lg">delete</span>
+                            </button>
                           </td>
                         </tr>
                       ))

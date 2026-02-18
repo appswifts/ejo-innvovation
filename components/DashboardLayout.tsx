@@ -6,10 +6,19 @@ import { useAuth } from '../contexts/AuthContext';
 const DashboardLayout: React.FC = () => {
     const { user, profile, signOut } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [quickNavOpen, setQuickNavOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
     if (!user || !profile) return null;
+
+    const quickLinks = [
+        { label: 'Home', icon: 'home', path: '/' },
+        { label: 'Journals', icon: 'menu_book', path: '/journals' },
+        { label: 'Books', icon: 'library_books', path: '/books' },
+        { label: 'Partners', icon: 'handshake', path: '/partners' },
+        { label: 'About Us', icon: 'info', path: '/about' },
+    ];
 
     // Define menu items based on roles
     const getMenuItems = () => {
@@ -43,6 +52,8 @@ const DashboardLayout: React.FC = () => {
             { label: 'Users', icon: 'group', path: '/dashboard/admin/users', roles: ['super_admin'] },
             { label: 'Roles & Perms', icon: 'admin_panel_settings', path: '/dashboard/admin/roles', roles: ['super_admin'] },
             { label: 'Journals', icon: 'menu_book', path: '/dashboard/admin/journals', roles: ['editor', 'super_admin'] },
+            { label: 'Partners', icon: 'handshake', path: '/dashboard/admin/partners', roles: ['super_admin'] },
+            { label: 'Settings', icon: 'settings', path: '/dashboard/admin/settings', roles: ['super_admin'] },
         ];
 
         return items.filter(item => {
@@ -126,7 +137,7 @@ const DashboardLayout: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 font-sans">
+            <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 font-sans relative">
                 {/* Mobile Header */}
                 <header className="h-24 flex items-center px-4 bg-white border-b border-slate-200 lg:hidden shrink-0">
                     <button
@@ -145,6 +156,43 @@ const DashboardLayout: React.FC = () => {
                 <main className="flex-1 overflow-auto p-0 bg-slate-50">
                     <Outlet />
                 </main>
+
+                {/* Quick Navigation FAB */}
+                <div className="fixed bottom-8 right-8 z-[60] flex flex-col items-end gap-3">
+                    {quickNavOpen && (
+                        <div className="flex flex-col items-end gap-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            {quickLinks.map((link, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => {
+                                        navigate(link.path);
+                                        setQuickNavOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all group scale-95 hover:scale-100 origin-right"
+                                    style={{ transitionDelay: `${(quickLinks.length - 1 - idx) * 50}ms` }}
+                                >
+                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{link.label}</span>
+                                    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined text-xl">{link.icon}</span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <button
+                        onClick={() => setQuickNavOpen(!quickNavOpen)}
+                        className={`size-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 transform ${quickNavOpen
+                            ? 'bg-slate-900 text-white rotate-45 scale-90'
+                            : 'bg-primary text-white hover:scale-110 hover:shadow-primary/30'
+                            }`}
+                        title="Quick Navigation"
+                    >
+                        <span className="material-symbols-outlined text-3xl">
+                            {quickNavOpen ? 'close' : 'explore'}
+                        </span>
+                    </button>
+                </div>
             </div>
         </div>
     );

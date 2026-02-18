@@ -17,7 +17,7 @@ const PrivacyPolicy: React.FC = () => {
             title: 'How We Use Your Information',
             content: `We use the information we collect to:
 
-• Operate, maintain, and improve the Nkiza Center platform.
+• Operate, maintain, and improve the Nkiza Center for Research platform.
 • Process manuscript submissions, conduct peer reviews, and manage publication workflows.
 • Facilitate book purchases, downloads, and author royalty payments.
 • Send you updates about submission status, review decisions, and platform announcements.
@@ -85,7 +85,7 @@ To exercise these rights, contact us at privacy@nkizacenter.com.`
             <section className="py-16 px-6 max-w-4xl mx-auto">
                 <div className="prose prose-slate max-w-none">
                     <p className="text-slate-600 leading-relaxed mb-10 text-lg">
-                        At Nkiza Center, we are committed to protecting your privacy and ensuring the security of your personal information.
+                        At Nkiza Center for Research, we are committed to protecting your privacy and ensuring the security of your personal information.
                         This Privacy Policy explains how we collect, use, and safeguard your data when you use our platform.
                     </p>
 

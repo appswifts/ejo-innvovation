@@ -142,6 +142,30 @@ const BookReader: React.FC = () => {
         );
     }
 
+    const handleDownload = async () => {
+        if (!book?.pdf_url) return;
+
+        try {
+            let path = book.pdf_url;
+            // Extract relative path if it's a full Supabase URL
+            if (path.includes('supabase.co')) {
+                const match = path.match(/\/library\/(.+)$/);
+                if (match) path = match[1];
+            }
+
+            const { data, error } = await supabase.storage
+                .from('library')
+                .createSignedUrl(path, 60);
+
+            if (error) throw error;
+            window.open(data.signedUrl, '_blank');
+        } catch (err) {
+            console.error('Download error:', err);
+            // Fallback to direct link if signed URL fails
+            window.open(book.pdf_url, '_blank');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col overflow-hidden">
             {/* Reader Controls */}
@@ -178,7 +202,25 @@ const BookReader: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="text-slate-400 hover:text-white transition-colors">
+                    <button
+                        onClick={handleDownload}
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                        title="Download PDF"
+                    >
+                        <span className="material-symbols-outlined">download</span>
+                    </button>
+                    <button
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
+                        onClick={() => {
+                            if (!document.fullscreenElement) {
+                                document.documentElement.requestFullscreen();
+                            } else {
+                                if (document.exitFullscreen) {
+                                    document.exitFullscreen();
+                                }
+                            }
+                        }}
+                    >
                         <span className="material-symbols-outlined">fullscreen</span>
                     </button>
                 </div>

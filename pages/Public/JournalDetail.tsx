@@ -274,38 +274,91 @@ const JournalDetail: React.FC = () => {
                           </span>
                           <div className="flex gap-3 items-center">
                             {hasAccess ? (
-                              <span className="flex items-center gap-1 text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded">
-                                <span className="material-symbols-outlined text-sm">lock_open</span> Access Granted
-                              </span>
-                            ) : (
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-slate-900">
-                                  {article.currency} {article.price?.toFixed(2)}
+                                <span className="flex items-center gap-1 text-[10px] font-bold bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-100">
+                                  <span className="material-symbols-outlined text-xs">{(journal?.is_open_access) ? 'public' : 'verified'}</span>
+                                  {journal?.is_open_access ? 'Open Access' : hasJournalAccess ? 'Included with Sub' : 'Purchased'}
                                 </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (!user) {
-                                      const checkoutUrl = encodeURIComponent(`/checkout?type=article&id=${article.id}`);
-                                      navigate(`/login?redirect=${checkoutUrl}`);
-                                      return;
-                                    }
-                                    navigate(`/checkout?type=article&id=${article.id}`);
-                                  }}
-                                  className="flex items-center gap-1 text-xs font-bold bg-primary text-white px-3 py-1.5 rounded hover:bg-blue-700 transition-colors z-10"
-                                >
-                                  <span className="material-symbols-outlined text-sm">shopping_cart</span> Buy
-                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <span className="block text-[10px] font-black text-slate-400 uppercase tracking-tighter">Standalone Price</span>
+                                  <span className="text-sm font-black text-slate-900">
+                                    {(article.price || 0) <= 0 ? 'Free' : `${article.currency || 'USD'} ${article.price?.toFixed(2)}`}
+                                  </span>
+                                </div>
+                                {((article.price || 0) <= 0 && journal?.is_open_access) ? (
+                                  <button
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!user) {
+                                        const checkoutUrl = encodeURIComponent(`/checkout?type=article&id=${article.id}`);
+                                        navigate(`/login?redirect=${checkoutUrl}`);
+                                        return;
+                                      }
+                                      try {
+                                        const { error } = await supabase.from('transactions').insert({
+                                          user_id: user.id,
+                                          manuscript_id: article.id,
+                                          amount: 0,
+                                          currency: article.currency || 'USD',
+                                          type: 'purchase',
+                                          status: 'completed',
+                                          description: `Free access: ${article.title}`,
+                                          payment_gateway: 'free',
+                                        });
+                                        if (error) throw error;
+                                        setPurchasedArticles(prev => new Set([...prev, article.id]));
+                                      } catch (err: any) {
+                                        alert('Failed: ' + err.message);
+                                      }
+                                    }}
+                                    className="flex items-center gap-1 text-xs font-bold bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-md shadow-green-500/20"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">lock_open</span> Get Free
+                                  </button>
+                                ) : (article.price || 0) > 0 ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!user) {
+                                        const checkoutUrl = encodeURIComponent(`/checkout?type=article&id=${article.id}`);
+                                        navigate(`/login?redirect=${checkoutUrl}`);
+                                        return;
+                                      }
+                                      navigate(`/checkout?type=article&id=${article.id}`);
+                                    }}
+                                    className="flex items-center gap-1 text-xs font-bold bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all active:scale-95 shadow-md shadow-primary/20"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">shopping_cart</span> Buy Paper
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!user) {
+                                        const checkoutUrl = encodeURIComponent(`/checkout?type=subscription&id=${journal?.id}`);
+                                        navigate(`/login?redirect=${checkoutUrl}`);
+                                        return;
+                                      }
+                                      navigate(`/checkout?type=subscription&id=${journal?.id}`);
+                                    }}
+                                    className="flex items-center gap-1 text-xs font-bold bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-all active:scale-95 shadow-md shadow-slate-900/20"
+                                  >
+                                    <span className="material-symbols-outlined text-sm">card_membership</span> Subscribe
+                                  </button>
+                                )}
                               </div>
                             )}
                             {!hasAccess && (
-                              <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-slate-200 transition-colors">
-                                <span className="material-symbols-outlined text-sm">visibility</span> View
+                              <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded hover:bg-slate-200 transition-colors">
+                                <span className="material-symbols-outlined text-sm">visibility</span> View Abstract
                               </button>
                             )}
                             {hasAccess && (
-                              <button className="flex items-center gap-1 text-xs font-bold bg-slate-100 px-3 py-1.5 rounded hover:bg-primary hover:text-white transition-colors">
-                                <span className="material-symbols-outlined text-sm">visibility</span> View
+                              <button className="flex items-center gap-1 text-xs font-bold bg-primary/10 text-primary px-3 py-1.5 rounded hover:bg-primary hover:text-white transition-colors">
+                                <span className="material-symbols-outlined text-sm">auto_stories</span> View Full Article
                               </button>
                             )}
                           </div>

@@ -38,8 +38,8 @@ const ContactUs: React.FC = () => {
                     <div className="lg:col-span-2 space-y-6">
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-6">Reach Out Directly</h2>
                         {[
-                            { icon: 'email', label: 'Email', value: 'info@nkizacenter.com', href: 'mailto:info@nkizacenter.com' },
-                            { icon: 'call', label: 'Phone', value: '+250 788 000 000', href: 'tel:+250788000000' },
+                            { icon: 'email', label: 'Email', value: 'contact@nkiza.com', href: 'mailto:contact@nkiza.com' },
+                            { icon: 'call', label: 'Phone', value: '+250 732 752 732', href: 'tel:+250732752732' },
                             { icon: 'location_on', label: 'Address', value: 'Kigali, Rwanda', href: '#' },
                         ].map((item, i) => (
                             <a key={i} href={item.href} className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-white hover:shadow-md transition-all group">

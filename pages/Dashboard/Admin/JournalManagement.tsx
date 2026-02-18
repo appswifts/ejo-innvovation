@@ -10,6 +10,11 @@ const JournalManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [coverPreview, setCoverPreview] = useState<string | null>(null);
+    const [uploadingCover, setUploadingCover] = useState(false);
+    const [useUrlInput, setUseUrlInput] = useState(false);
+    const [dragActive, setDragActive] = useState(false);
 
     const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
 
@@ -70,6 +75,9 @@ const JournalManagement: React.FC = () => {
 
     const handleEdit = (journal: Journal) => {
         setSelectedJournal(journal);
+        setCoverFile(null);
+        setCoverPreview(journal.cover_image_url || null);
+        setUseUrlInput(false);
         setFormData({
             title: journal.title,
             slug: journal.slug,
@@ -90,6 +98,9 @@ const JournalManagement: React.FC = () => {
     const handleClose = () => {
         setIsModalOpen(false);
         setSelectedJournal(null);
+        setCoverFile(null);
+        setCoverPreview(null);
+        setUseUrlInput(false);
         setFormData({
             title: '',
             slug: '',
@@ -124,8 +135,27 @@ const JournalManagement: React.FC = () => {
         setSubmitting(true);
 
         try {
+            let finalCoverUrl = formData.cover_image_url;
+
+            // Upload cover file if selected
+            if (coverFile) {
+                setUploadingCover(true);
+                const fileExt = coverFile.name.split('.').pop();
+                const fileName = `journal-cover-${Date.now()}.${fileExt}`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('journal-covers')
+                    .upload(fileName, coverFile, { upsert: true });
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage
+                    .from('journal-covers')
+                    .getPublicUrl(uploadData.path);
+                finalCoverUrl = publicUrl;
+                setUploadingCover(false);
+            }
+
             const payload = {
                 ...formData,
+                cover_image_url: finalCoverUrl,
                 impact_factor: formData.impact_factor ? parseFloat(formData.impact_factor) : null,
                 subscription_package_id: formData.is_open_access ? null : (formData.subscription_package_id || null),
             };
@@ -320,15 +350,67 @@ const JournalManagement: React.FC = () => {
                         </div>
 
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-bold text-slate-700 mb-1">Cover Image URL</label>
-                            <input
-                                name="cover_image_url"
-                                type="url"
-                                value={formData.cover_image_url}
-                                onChange={handleChange}
-                                className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                placeholder="https://..."
-                            />
+                            <label className="block text-sm font-bold text-slate-700 mb-1">Cover Image</label>
+
+                            {/* Toggle between upload and URL */}
+                            <div className="flex items-center gap-2 mb-2">
+                                <button type="button" onClick={() => setUseUrlInput(false)} className={`text-xs font-bold px-3 py-1 rounded-full transition ${!useUrlInput ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Upload File</button>
+                                <button type="button" onClick={() => setUseUrlInput(true)} className={`text-xs font-bold px-3 py-1 rounded-full transition ${useUrlInput ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Paste URL</button>
+                            </div>
+
+                            {useUrlInput ? (
+                                <input
+                                    name="cover_image_url"
+                                    type="url"
+                                    value={formData.cover_image_url}
+                                    onChange={handleChange}
+                                    className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                    placeholder="https://..."
+                                />
+                            ) : coverPreview || coverFile ? (
+                                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                                    <img src={coverFile ? URL.createObjectURL(coverFile) : coverPreview!} alt="Cover preview" className="w-full h-40 object-cover" />
+                                    <button
+                                        type="button"
+                                        onClick={() => { setCoverFile(null); setCoverPreview(null); setFormData(prev => ({ ...prev, cover_image_url: '' })); }}
+                                        className="absolute top-2 right-2 size-8 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition shadow-lg"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">close</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div
+                                    className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${dragActive ? 'border-primary bg-primary/5' : 'border-slate-300 hover:border-primary/50 hover:bg-slate-50'}`}
+                                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                                    onDragLeave={() => setDragActive(false)}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        setDragActive(false);
+                                        const file = e.dataTransfer.files[0];
+                                        if (file && file.type.startsWith('image/')) {
+                                            if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+                                            setCoverFile(file);
+                                        }
+                                    }}
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = (e: any) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                if (file.size > 5 * 1024 * 1024) { alert('File must be under 5MB'); return; }
+                                                setCoverFile(file);
+                                            }
+                                        };
+                                        input.click();
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined text-3xl text-slate-400 mb-2">cloud_upload</span>
+                                    <p className="text-sm font-bold text-slate-600">Drag & drop or click to upload</p>
+                                    <p className="text-xs text-slate-400 mt-1">PNG, JPG, WebP up to 5MB</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="md:col-span-2">

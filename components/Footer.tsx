@@ -60,11 +60,12 @@ const Footer: React.FC = () => {
                     </div>
                 </div>
                 <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-                    <p>© 2026 Nkiza Center for Research. All rights reserved.</p>
+                    <p>© 2026 Nkiza Center for Research (NCR). All rights reserved.</p>
                     <div className="flex gap-6 mt-4 md:mt-0 uppercase tracking-wider">
                         <button onClick={() => navigate('/privacy')} className="hover:text-white transition-colors">Privacy</button>
                         <button onClick={() => navigate('/copyright')} className="hover:text-white transition-colors">Terms</button>
                         <button onClick={() => navigate('/about')} className="hover:text-white transition-colors">About</button>
+                        <button onClick={() => navigate('/partners')} className="hover:text-white transition-colors">Partners</button>
                         <button onClick={() => navigate('/contact')} className="hover:text-white transition-colors">Contact</button>
                     </div>
                 </div>

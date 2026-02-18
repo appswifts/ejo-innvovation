@@ -18,7 +18,7 @@ const AboutUs: React.FC = () => {
                         Empowering African Scholarship<br />& Innovation
                     </h1>
                     <p className="text-lg text-blue-100 max-w-2xl mx-auto leading-relaxed">
-                        Nkiza Center is dedicated to advancing scholarly publishing, creative expression,
+                        Nkiza Center for Research (NCR) is dedicated to advancing scholarly publishing, creative expression,
                         and intellectual discourse across Africa and the global diaspora.
                     </p>
                 </div>

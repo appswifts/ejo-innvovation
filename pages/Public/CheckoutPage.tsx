@@ -23,7 +23,8 @@ const CheckoutPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'dpo'>('dpo');
+    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar'>('polar');
+    const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!loading && !user) {
@@ -37,6 +38,7 @@ const CheckoutPage: React.FC = () => {
             return;
         }
         fetchItemDetails();
+        fetchPaymentSettings();
     }, [type, id, packageId, user]);
 
     const fetchItemDetails = async () => {
@@ -117,30 +119,103 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
+    const fetchPaymentSettings = async () => {
+        const { data } = await supabase
+            .from('site_settings')
+            .select('key, value')
+            .eq('category', 'payment');
+        if (data) {
+            const map: Record<string, string> = {};
+            data.forEach((s: { key: string; value: string }) => { map[s.key] = s.value; });
+            setPaymentSettings(map);
+        }
+    };
+
     const handleConfirmOrder = async () => {
         if (!user || !item) return;
 
         try {
             setProcessing(true);
 
-            if (paymentMethod === 'dpo') {
-                // DPO Payment Flow
-                const { createPaymentIntent } = await import('../../lib/dpo');
-                const response = await createPaymentIntent(
-                    item.price,
-                    item.currency,
-                    user.email || '',
-                    {
-                        userId: user.id,
-                        type,
-                        itemId: id,
-                        packageId: type === 'subscription' || type === 'manuscript' ? packageId : undefined
-                    }
-                );
+            // Free item — auto-complete without payment
+            if (item.price <= 0) {
+                const transactionData: any = {
+                    user_id: user.id,
+                    amount: 0,
+                    currency: item.currency,
+                    type: type === 'subscription' ? 'journal_subscription' :
+                        (type === 'book' || type === 'article') ? 'purchase' : 'apc_payment',
+                    status: 'completed',
+                    description: `Free access: ${item.title}`,
+                    payment_gateway: 'free'
+                };
 
-                // Redirect to DPO Payment Page
-                window.location.href = response.url;
+                if (type === 'book') transactionData.book_id = id;
+                if (type === 'manuscript') {
+                    transactionData.manuscript_id = id;
+                    transactionData.package_id = packageId;
+                }
+                if (type === 'article') transactionData.manuscript_id = id;
+                if (type === 'subscription') {
+                    const { data: journal } = await supabase
+                        .from('journals')
+                        .select('subscription_package_id')
+                        .eq('id', id)
+                        .single();
+                    transactionData.package_id = journal?.subscription_package_id;
+                }
+
+                const { error } = await supabase.from('transactions').insert([transactionData]);
+                if (error) throw error;
+
+                setOrderSuccess(true);
+                setProcessing(false);
                 return;
+            }
+
+            if (paymentMethod === 'polar') {
+                // Polar Payment Flow
+                try {
+                    const { createCheckoutSession } = await import('../../lib/polar');
+
+                    // Build metadata, resolving packageId for subscriptions
+                    let resolvedPackageId: string | undefined = undefined;
+                    if (type === 'subscription') {
+                        const { data: journal } = await supabase
+                            .from('journals')
+                            .select('subscription_package_id')
+                            .eq('id', id)
+                            .single();
+                        resolvedPackageId = journal?.subscription_package_id || undefined;
+                    } else if (type === 'manuscript') {
+                        resolvedPackageId = packageId || undefined;
+                    }
+
+                    const response = await createCheckoutSession(
+                        item.price,
+                        item.currency,
+                        user.email || '',
+                        {
+                            userId: user.id,
+                            type: type || 'general',
+                            itemId: id || 'unknown',
+                            ...(resolvedPackageId ? { packageId: resolvedPackageId } : {})
+                        }
+                    );
+
+                    // Redirect to Polar Checkout Page
+                    if (response?.url) {
+                        window.location.href = response.url;
+                        return;
+                    } else {
+                        throw new Error("No checkout URL returned from payment provider.");
+                    }
+                } catch (polarError: any) {
+                    console.error("Polar Flow Error:", polarError);
+                    alert("Payment Error: " + (polarError.message || "Failed to initialize checkout session. Please try again or use bank transfer."));
+                    setProcessing(false);
+                    return;
+                }
             }
 
             // Manual Bank Transfer Flow
@@ -197,40 +272,47 @@ const CheckoutPage: React.FC = () => {
     }
 
     if (orderSuccess) {
+        const isFree = item && item.price <= 0;
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
                 <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-10 text-center animate-in zoom-in duration-300">
                     <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-4xl font-bold">check_circle</span>
                     </div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2">Order Received!</h2>
-                    <p className="text-slate-500 mb-8">Your order is now <strong>PENDING</strong>. Please proceed with the payment via Bank Transfer and send the proof to our finance team.</p>
+                    <h2 className="text-2xl font-black text-slate-900 mb-2">{isFree ? 'Access Granted!' : 'Order Received!'}</h2>
+                    <p className="text-slate-500 mb-8">
+                        {isFree
+                            ? 'This item is free. You now have full access — enjoy!'
+                            : <>Your order is now <strong>PENDING</strong>. Please proceed with the payment via Bank Transfer and send the proof to our finance team.</>}
+                    </p>
 
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left mb-8">
-                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Payment Instructions</p>
-                        <div className="space-y-3">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400">Bank Name</p>
-                                <p className="text-sm font-bold text-slate-900">National Bank of Rwanda</p>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400">Account Number</p>
-                                <p className="text-sm font-bold text-slate-900">000123-456789-01</p>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400">Account Name</p>
-                                <p className="text-sm font-bold text-slate-900">Nkiza Academic Journals Ltd</p>
+                    {!isFree && (
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left mb-8">
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Payment Instructions</p>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400">Bank Name</p>
+                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_name || 'National Bank of Rwanda'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400">Account Number</p>
+                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_account_number || '000123-456789-01'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400">Account Name</p>
+                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_account_name || 'Nkiza Academic Journals Ltd'}</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     <button
-                        onClick={() => navigate('/dashboard')}
+                        onClick={() => navigate(isFree ? -1 as any : '/dashboard')}
                         className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20"
                     >
-                        Go to Dashboard
+                        {isFree ? 'Go Back' : 'Go to Dashboard'}
                     </button>
-                    <p className="mt-4 text-xs text-slate-400">Your content will be activated once payment is verified by an Admin.</p>
+                    {!isFree && <p className="mt-4 text-xs text-slate-400">Your content will be activated once payment is verified by an Admin.</p>}
                 </div>
             </div>
         );
@@ -264,14 +346,14 @@ const CheckoutPage: React.FC = () => {
 
                         <div className="border-t border-slate-100 pt-6 mt-6 flex justify-between items-center">
                             <span className="text-slate-500 font-bold">Price</span>
-                            <span className="text-2xl font-black text-slate-900">{item?.currency} {item?.price.toFixed(2)}</span>
+                            <span className="text-2xl font-black text-slate-900">{item && item.price <= 0 ? 'Free' : `${item?.currency} ${item?.price.toFixed(2)}`}</span>
                         </div>
                     </div>
 
                     <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                         <span className="material-symbols-outlined text-amber-600">info</span>
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                            <strong>Note:</strong> We currently only support manual bank transfers. After confirming your order, you will receive our bank details. Your purchase will be activated after our finance team verifies the transfer.
+                            <strong>Note:</strong> {paymentSettings.payment_note || 'We currently support manual bank transfers and Polar online payments. After confirming your order, you will receive our bank details. Your purchase will be activated after our finance team verifies the transfer.'}
                         </p>
                     </div>
 
@@ -280,16 +362,16 @@ const CheckoutPage: React.FC = () => {
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 underline decoration-primary decoration-4 underline-offset-8">Payment Method</p>
                         <div className="space-y-4">
                             <div
-                                onClick={() => setPaymentMethod('dpo')}
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'dpo' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
+                                onClick={() => setPaymentMethod('polar')}
+                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'polar' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'dpo' ? 'border-primary' : 'border-slate-300'}`}>
-                                        {paymentMethod === 'dpo' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'polar' ? 'border-primary' : 'border-slate-300'}`}>
+                                        {paymentMethod === 'polar' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
                                     </div>
                                     <span className="font-bold text-slate-900">Pay with Card / Mobile Money</span>
                                 </div>
-                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">DPO Pay</span>
+                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Polar</span>
                             </div>
 
                             <div

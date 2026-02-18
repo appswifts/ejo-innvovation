@@ -166,7 +166,7 @@ const Overview: React.FC = () => {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
                         <div className="relative z-10">
                             <h2 className="text-lg font-black mb-1">Platform News</h2>
-                            <p className="text-slate-400 text-xs mb-6 font-medium">What's new at Nkiza Center.</p>
+                            <p className="text-slate-400 text-xs mb-6 font-medium">What's new at Nkiza Center for Research.</p>
 
                             <div className="bg-white/5 rounded-xl p-4 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer">
                                 <span className="bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded uppercase mb-2 inline-block tracking-widest">Update</span>

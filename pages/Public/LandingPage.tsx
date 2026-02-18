@@ -19,23 +19,44 @@ interface Book {
   price: string;
 }
 
+interface Partner {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  description: string | null;
+}
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [journals, setJournals] = useState<Journal[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const heroImages = [
+    '/image (1).jpg',
+    '/image (2).jpg',
+    '/image (3).jpg',
+    '/image (4).jpg'
+  ];
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [journalsRes, booksRes] = await Promise.all([
+      const [journalsRes, booksRes, partnersRes] = await Promise.all([
         supabase.from('journals').select('id, title, discipline, cover_image_url').limit(4),
-        supabase.from('books').select('id, title, author_name, cover_url, price').limit(4)
+        supabase.from('books').select('id, title, author_name, cover_url, price').limit(4),
+        supabase.from('partners').select('id, name, logo_url, description').eq('is_active', true).order('name').limit(6)
       ]);
 
       if (journalsRes.error) throw journalsRes.error;
@@ -43,6 +64,7 @@ const LandingPage: React.FC = () => {
 
       setJournals(journalsRes.data || []);
       setBooks(booksRes.data || []);
+      setPartners(partnersRes.data || []);
     } catch (error) {
       console.error('Error fetching landing page data:', error);
     } finally {
@@ -98,17 +120,35 @@ const LandingPage: React.FC = () => {
       </nav>
 
       {/* Hero Section */}
-      <div className="relative pt-16 bg-secondary overflow-hidden min-h-[600px] flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-red-900 to-red-700 opacity-90"></div>
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+      <div className="relative pt-32 overflow-hidden min-h-[600px] flex items-center justify-center pb-20">
+        {/* Background Images Slider */}
+        {heroImages.map((image, index) => (
+          <div
+            key={image}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-[5000ms] ease-out"
+              style={{
+                backgroundImage: `url('${image}')`,
+                transform: index === currentImageIndex ? 'scale(1.1)' : 'scale(1)'
+              }}
+            ></div>
+          </div>
+        ))}
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <span className="inline-block py-1 px-3 rounded-full bg-primary/20 border border-primary/30 text-blue-100 text-xs font-semibold tracking-wider mb-6 uppercase">Excellence in Academic Research</span>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tight mb-4 leading-tight">
-            Advancing Human <br />
-            <span className="text-blue-400 drop-shadow-lg">Knowledge</span>
+          <span className="inline-block py-1 px-3 rounded-full bg-primary/20 border border-primary/30 text-blue-100 text-xs font-semibold tracking-wider mb-6 uppercase">Welcome to Nkiza Center for Research</span>
+          <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-4 leading-tight">
+            Where Knowledge Begins <br />
+            <span className="text-blue-400 drop-shadow-lg">and the Future is Built</span>
           </h1>
-          <p className="mt-6 text-lg md:text-xl text-red-100 max-w-2xl mx-auto font-light leading-relaxed">
-            A premium multidisciplinary platform for professional journal publication, monographs, and global research dissemination.
+          <p className="mt-6 text-lg md:text-xl text-white/90 max-w-2xl mx-auto font-light leading-relaxed">
+            We empower researchers, scholars, creative writers and innovators to discover, publish, and lead transformative ideas. Through world-class publishing, advanced research infrastructure, and global collaboration, we shape the future of science, economics, and society.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -126,19 +166,23 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2">
-          <div className="w-8 h-1 bg-primary rounded-full"></div>
-          <div className="w-1.5 h-1.5 bg-white/30 rounded-full"></div>
-          <div className="w-1.5 h-1.5 bg-white/30 rounded-full"></div>
+          {heroImages.map((_, index) => (
+            <div
+              key={index}
+              className={`transition-all duration-300 rounded-full ${index === currentImageIndex ? 'w-8 h-1 bg-primary' : 'w-1.5 h-1.5 bg-white/30'
+                }`}
+            ></div>
+          ))}
         </div>
       </div>
 
-      {/* New Releases / Featured Monographs */}
+      {/* New Releases / Featured Books */}
       <section className="py-20 bg-background-light dark:bg-background-dark">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-12">
             <div>
               <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-2">New Releases</h2>
-              <h3 className="text-3xl font-bold text-gray-900 dark:text-white">Featured Monographs</h3>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white">Featured Books</h3>
             </div>
             <button
               onClick={() => navigate('/books')}
@@ -193,7 +237,7 @@ const LandingPage: React.FC = () => {
               <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-3">Our Foundation</h2>
               <h3 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">Upholding Academic <br />Rigor and Excellence</h3>
               <p className="text-gray-400 text-lg mb-10 leading-relaxed">
-                At Nkiza Center, we implement a rigorous review structure to ensure that every publication meets international quality standards.
+                At Nkiza Center for Research (NCR), we implement a rigorous review structure to ensure that every publication meets international quality standards.
               </p>
               <div className="space-y-8">
                 <div className="flex items-start">
@@ -232,12 +276,7 @@ const LandingPage: React.FC = () => {
                   className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity duration-500"
                   src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhH52BpIdbY1KJ4aIyxs7oe-4pg-l5rGSVM_09Yw4C6SU5dyjY4qHnZPTrgeMPnyfzXih2E65HXQl4sI3TWFrM5cJCz4g9zDWMTz8sVrGY1Khiit1Qrj4uFzfixE1RXSg2CcnF6FAdCq-k1b2Sy5PpphLRkD7iZokES8uprQakll0AP4faeRi4HTmn1m3uJ2An6BKkyC1ppXtumog_hOhSnynZh_k8hySROJ6IMfDVuAEzZWcIxcaO6uuVtcqpPU7noetfOWCp7k-l"
                 />
-                <div className="absolute -bottom-6 -left-6 bg-primary text-white p-6 rounded-2xl shadow-xl border-4 border-background-dark">
-                  <div className="flex flex-col items-center justify-center w-24 h-24 text-center">
-                    <span className="text-4xl font-extrabold">12+</span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider mt-1 leading-tight">Years of<br />Excellence</span>
-                  </div>
-                </div>
+
               </div>
             </div>
           </div>
@@ -291,6 +330,49 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Our Partners Section */}
+      {
+        partners.length > 0 && (
+          <section className="py-20 bg-white dark:bg-background-dark">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <h2 className="text-xs font-bold text-primary tracking-wider uppercase mb-2">Collaboration</h2>
+              <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">Our Partners</h3>
+              <p className="text-gray-500 text-sm max-w-xl mx-auto mb-12">
+                We collaborate with leading institutions and organizations to advance research and knowledge globally.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
+                {partners.map(partner => (
+                  <div
+                    key={partner.id}
+                    className="flex flex-col items-center gap-3 p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-surface-dark transition-colors"
+                  >
+                    {partner.logo_url ? (
+                      <img
+                        src={partner.logo_url}
+                        alt={partner.name}
+                        className="h-14 w-auto object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/10 to-blue-50 flex items-center justify-center">
+                        <span className="material-icons text-primary text-2xl">handshake</span>
+                      </div>
+                    )}
+                    <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{partner.name}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => navigate('/partners')}
+                className="mt-10 inline-flex items-center gap-2 text-sm font-bold text-primary hover:text-blue-700 transition-colors"
+              >
+                View All Partners
+                <span className="material-icons text-base">arrow_forward</span>
+              </button>
+            </div>
+          </section>
+        )
+      }
 
       <Footer />
     </div>

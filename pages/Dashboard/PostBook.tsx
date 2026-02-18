@@ -130,7 +130,7 @@ const PostBook: React.FC = () => {
                         <span className="material-symbols-outlined text-sm">arrow_back</span> Back to My Books
                     </button>
                     <h1 className="text-3xl font-extrabold text-slate-900">Post Your Book</h1>
-                    <p className="text-slate-500 mt-1">Submit your book for publication on Nkiza Center.</p>
+                    <p className="text-slate-500 mt-1">Submit your book for publication on Nkiza Center for Research.</p>
                 </div>
 
                 {/* Progress Steps */}
@@ -149,8 +149,8 @@ const PostBook: React.FC = () => {
                         return (
                             <React.Fragment key={s.key}>
                                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${isActive ? 'bg-primary text-white shadow-md' :
-                                        isComplete ? 'bg-emerald-100 text-emerald-700' :
-                                            'bg-slate-100 text-slate-400'
+                                    isComplete ? 'bg-emerald-100 text-emerald-700' :
+                                        'bg-slate-100 text-slate-400'
                                     }`}>
                                     <span className="material-symbols-outlined text-lg">{isComplete ? 'check_circle' : s.icon}</span>
                                     <span className="text-xs font-bold hidden sm:block">{s.label}</span>
@@ -328,8 +328,8 @@ const PostBook: React.FC = () => {
                                     <p className="font-bold text-slate-900">{formData.title}</p>
                                     <p className="text-sm text-slate-500">by {formData.author_name}</p>
                                     <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${formData.type === 'scholarly' ? 'bg-indigo-100 text-indigo-700' :
-                                            formData.type === 'creative' ? 'bg-pink-100 text-pink-700' :
-                                                'bg-amber-100 text-amber-700'
+                                        formData.type === 'creative' ? 'bg-pink-100 text-pink-700' :
+                                            'bg-amber-100 text-amber-700'
                                         }`}>
                                         {formData.type === 'scholarly' ? 'Scholarly' : formData.type === 'creative' ? 'Creative Content' : 'General Nonfiction'}
                                     </span>

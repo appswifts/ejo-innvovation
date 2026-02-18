@@ -16,6 +16,8 @@ interface ManuscriptDetail {
     journal: { title: string } | null;
     payment_status?: string;
     display_id?: string;
+    price: number;
+    currency: string;
 }
 
 interface Comment {
@@ -49,7 +51,9 @@ const ManuscriptDetailPage: React.FC = () => {
     const [editForm, setEditForm] = useState({
         title: '',
         abstract: '',
-        cover_letter: ''
+        cover_letter: '',
+        price: 0,
+        currency: 'USD'
     });
     const [newFile, setNewFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -254,6 +258,8 @@ const ManuscriptDetailPage: React.FC = () => {
                     title: editForm.title,
                     abstract: editForm.abstract,
                     cover_letter: editForm.cover_letter,
+                    price: parseFloat(editForm.price.toString()) || 0,
+                    currency: editForm.currency || 'USD',
                     file_url: fileUrl,
                     updated_at: new Date().toISOString()
                 })
@@ -266,6 +272,8 @@ const ManuscriptDetailPage: React.FC = () => {
                 title: editForm.title,
                 abstract: editForm.abstract,
                 cover_letter: editForm.cover_letter,
+                price: parseFloat(editForm.price.toString()) || 0,
+                currency: editForm.currency || 'USD',
                 file_url: fileUrl
             });
 
@@ -287,7 +295,9 @@ const ManuscriptDetailPage: React.FC = () => {
             setEditForm({
                 title: manuscript.title || '',
                 abstract: manuscript.abstract || '',
-                cover_letter: manuscript.cover_letter || ''
+                cover_letter: manuscript.cover_letter || '',
+                price: manuscript.price || 0,
+                currency: manuscript.currency || 'USD'
             });
         }
     }, [manuscript]);
@@ -466,6 +476,30 @@ const ManuscriptDetailPage: React.FC = () => {
                                                 className="w-full text-2xl font-bold text-slate-900 border-b-2 border-primary/20 focus:border-primary outline-none py-2 bg-transparent transition-all"
                                             />
                                         </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Price (Individual Purchase)</label>
+                                                <input
+                                                    type="number"
+                                                    value={editForm.price}
+                                                    onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full text-lg font-bold text-slate-900 border-b-2 border-primary/20 focus:border-primary outline-none py-2 bg-transparent transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Currency</label>
+                                                <select
+                                                    value={editForm.currency}
+                                                    onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}
+                                                    className="w-full text-lg font-bold text-slate-900 border-b-2 border-primary/20 focus:border-primary outline-none py-2 bg-transparent transition-all"
+                                                >
+                                                    <option value="USD">USD</option>
+                                                    <option value="EUR">EUR</option>
+                                                    <option value="RWF">RWF</option>
+                                                    <option value="GBP">GBP</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <h1 className="text-3xl font-bold text-slate-900 flex-1">{manuscript.title}</h1>
@@ -496,6 +530,13 @@ const ManuscriptDetailPage: React.FC = () => {
                                 <div>
                                     <span className="font-bold text-slate-400 uppercase text-[10px] block tracking-widest mb-1">Submitted</span>
                                     <span className="font-medium text-slate-900">{new Date(manuscript.submission_date).toLocaleDateString()}</span>
+                                </div>
+                                <div className="w-px h-8 bg-slate-200"></div>
+                                <div>
+                                    <span className="font-bold text-slate-400 uppercase text-[10px] block tracking-widest mb-1">Pricing</span>
+                                    <span className="font-medium text-slate-900">
+                                        {manuscript.price > 0 ? `${manuscript.currency} ${manuscript.price.toFixed(2)}` : 'Free / Open'}
+                                    </span>
                                 </div>
                             </div>
 
@@ -593,7 +634,9 @@ const ManuscriptDetailPage: React.FC = () => {
                                             setEditForm({
                                                 title: manuscript.title || '',
                                                 abstract: manuscript.abstract || '',
-                                                cover_letter: manuscript.cover_letter || ''
+                                                cover_letter: manuscript.cover_letter || '',
+                                                price: manuscript.price || 0,
+                                                currency: manuscript.currency || 'USD'
                                             });
                                         }}
                                         disabled={uploading || updatingStatus}

@@ -178,12 +178,50 @@ const ArticleView: React.FC = () => {
     }
   };
 
-  const handlePurchase = () => {
+  const [claiming, setClaiming] = useState(false);
+
+  const handlePurchase = async () => {
     if (!user) {
       const currentUrl = encodeURIComponent(`/checkout?type=article&id=${article?.id}`);
       navigate(`/login?redirect=${currentUrl}`);
       return;
     }
+
+    // Free article logic
+    if ((article?.price || 0) <= 0) {
+      // If it's an Open Access journal, anyone can claim for free (already handled by checkAccess bypass, but safe here)
+      // If it's a PAID journal, we only allow free claim if the admin intended it (but usually we'd want them to subscribe)
+      // For now, let's keep it so if price is 0, it's free, BUT we show it differently in UI.
+      // Wait, if the user says "we still have open access", they want it gated.
+      // LET'S CHANGE THIS: If journal is NOT open access, price 0 still requires journal subscription.
+      if (!article.journal?.is_open_access) {
+        navigate(`/checkout?type=subscription&id=${article.journal?.id}`);
+        return;
+      }
+
+      setClaiming(true);
+      try {
+        const { error } = await supabase.from('transactions').insert({
+          user_id: user.id,
+          manuscript_id: article?.id,
+          amount: 0,
+          currency: article?.currency || 'USD',
+          type: 'purchase',
+          status: 'completed',
+          description: `Free access: ${article?.title}`,
+          payment_gateway: 'free',
+        });
+        if (error) throw error;
+        setHasAccess(true);
+      } catch (err: any) {
+        console.error('Error claiming free article:', err);
+        alert('Failed to claim article: ' + err.message);
+      } finally {
+        setClaiming(false);
+      }
+      return;
+    }
+
     navigate(`/checkout?type=article&id=${article?.id}`);
   };
 
@@ -286,20 +324,53 @@ const ArticleView: React.FC = () => {
                     <span className="material-symbols-outlined text-4xl">lock</span>
                   </div>
                   <h3 className="text-xl font-bold text-slate-900 mb-2">Restricted Access</h3>
-                  <p className="text-slate-500 mb-6 max-w-md mx-auto">
-                    This article is published in a premium journal. Purchase access to view and download the full text.
+                  <p className="text-slate-500 mb-8 max-w-md mx-auto">
+                    This article is published in a premium journal. Choose an access option below to view and download the full text.
                   </p>
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="text-3xl font-black text-slate-900">
-                      {article.currency || 'USD'} {(article.price || 0).toFixed(2)}
+                  <div className="flex flex-col md:flex-row items-stretch justify-center gap-6 w-full max-w-2xl px-4">
+                    {/* Individual Article Purchase */}
+                    <div className="flex-1 flex flex-col items-center p-6 rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <span className="material-symbols-outlined text-primary text-3xl mb-4">description</span>
+                      <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Individual Paper</div>
+                      <div className="text-2xl font-black text-slate-900 mb-6 text-center">
+                        {(article.price || 0) <= 0 ? (isPaidJournal ? 'Subscription Required' : 'Free') : `${article.currency || 'USD'} ${(article.price || 0).toFixed(2)}`}
+                      </div>
+                      <button
+                        onClick={handlePurchase}
+                        disabled={claiming}
+                        className="w-full bg-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-lg hover:shadow-primary/30 active:scale-95 disabled:opacity-60"
+                      >
+                        {claiming ? (
+                          <><span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> Claiming...</>
+                        ) : (article.price || 0) <= 0 ? (
+                          isPaidJournal ? (
+                            <><span className="material-symbols-outlined text-sm">workspace_premium</span> Subscribe to Read</>
+                          ) : (
+                            <><span className="material-symbols-outlined text-sm">lock_open</span> Free Access</>
+                          )
+                        ) : (
+                          <><span className="material-symbols-outlined text-sm">shopping_cart</span> Buy Article</>
+                        )}
+                      </button>
                     </div>
-                    <button
-                      onClick={handlePurchase}
-                      className="bg-primary text-white font-bold py-4 px-10 rounded-xl hover:bg-blue-700 transition flex items-center gap-2 mx-auto shadow-xl hover:shadow-primary/30 transform hover:-translate-y-0.5"
-                    >
-                      <span className="material-symbols-outlined">shopping_cart</span>
-                      Purchase Access
-                    </button>
+
+                    {/* Journal Subscription */}
+                    {article.journal?.subscription_package_id && (
+                      <div className="flex-1 flex flex-col items-center p-6 rounded-2xl border border-primary/20 bg-primary/5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">BEST VALUE</div>
+                        <span className="material-symbols-outlined text-primary-dark text-3xl mb-4">workspace_premium</span>
+                        <div className="text-[10px] font-black uppercase text-primary/60 tracking-widest mb-1">Journal Subscription</div>
+                        <div className="text-2xl font-black text-primary-dark mb-6">Full Journal Access</div>
+                        <button
+                          onClick={() => navigate(`/checkout?type=subscription&id=${article.journal?.id}`)}
+                          className="w-full bg-slate-900 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-lg active:scale-95"
+                        >
+                          <span className="material-symbols-outlined text-sm">card_membership</span>
+                          Subscribe Now
+                        </button>
+                        <p className="text-[10px] text-slate-500 mt-4 text-center">Unlocks all articles in this journal</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
