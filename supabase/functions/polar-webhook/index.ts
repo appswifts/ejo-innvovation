@@ -51,64 +51,83 @@ Deno.serve(async (req) => {
         );
 
         // Handle different event types
-        if (eventType === 'checkout.updated' || eventType === 'checkout.confirmed') {
-            const checkout = event.data;
-            const checkoutId = checkout.id;
-            const checkoutStatus = checkout.status; // 'confirmed', 'failed', 'expired'
+        if (eventType === 'checkout.updated' || eventType === 'checkout.confirmed' || eventType === 'order.created') {
+            const data = event.data;
+            const checkoutId = data.checkout_id || data.id;
+            const checkoutStatus = data.status; // 'confirmed', 'succeeded', 'paid'
+            const polarOrderId = data.order_id || (eventType === 'order.created' ? data.id : null);
 
-            let status = 'pending';
-            if (checkoutStatus === 'confirmed' || checkoutStatus === 'succeeded') {
-                status = 'paid';
-            } else if (checkoutStatus === 'failed') {
-                status = 'failed';
-            } else if (checkoutStatus === 'expired') {
-                status = 'cancelled';
+            let isPaid = false;
+            if (eventType === 'order.created' || checkoutStatus === 'confirmed' || checkoutStatus === 'succeeded' || checkoutStatus === 'paid') {
+                isPaid = true;
             }
 
-            const { error } = await supabaseClient.from('polar_transactions')
+            // 1. Update polar_transactions log
+            const { error: logError } = await supabaseClient.from('polar_transactions')
                 .update({
-                    status,
-                    polar_order_id: checkout.order_id || null,
+                    status: isPaid ? 'paid' : (checkoutStatus === 'failed' ? 'failed' : 'pending'),
+                    polar_order_id: polarOrderId,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('checkout_id', checkoutId);
 
-            if (error) {
-                console.error("Webhook DB Update Error (checkout):", error);
-            }
-        } else if (eventType === 'order.created') {
-            const order = event.data;
-            const checkoutId = order.checkout_id;
+            if (logError) console.error("Webhook Log Update Error:", logError);
 
-            if (checkoutId) {
-                const { error } = await supabaseClient.from('polar_transactions')
-                    .update({
-                        status: 'paid',
-                        polar_order_id: order.id,
-                        updated_at: new Date().toISOString(),
-                    })
-                    .eq('checkout_id', checkoutId);
+            // 2. If paid, sync to main transactions table to grant access
+            if (isPaid) {
+                const metadata = data.metadata || {};
+                const userId = metadata.userId;
+                const refId = metadata.itemId || metadata.ref_id;
+                const refType = metadata.type || metadata.ref_type;
+                const packageId = metadata.packageId;
 
-                if (error) {
-                    console.error("Webhook DB Update Error (order):", error);
+                if (userId && refId) {
+                    // Check for existing transaction to prevent duplicates
+                    const { data: existing } = await supabaseClient
+                        .from('transactions')
+                        .select('id')
+                        .eq('gateway_transaction_id', polarOrderId || checkoutId)
+                        .maybeSingle();
+
+                    if (!existing) {
+                        const transactionData = {
+                            user_id: userId,
+                            amount: data.amount / 100, // Polar amounts are in cents
+                            currency: data.currency?.toUpperCase() || 'USD',
+                            status: 'completed',
+                            payment_gateway: 'polar',
+                            gateway_transaction_id: polarOrderId || checkoutId,
+                            description: `Purchased via Polar: ${refType} (${refId})`,
+                            type: refType === 'subscription' ? 'journal_subscription' :
+                                (refType === 'book' || refType === 'article') ? 'purchase' : 'apc_payment',
+                        };
+
+                        if (refType === 'book') transactionData.book_id = refId;
+                        if (refType === 'manuscript' || refType === 'article') transactionData.manuscript_id = refId;
+                        if (packageId) transactionData.package_id = packageId;
+
+                        const { error: syncError } = await supabaseClient
+                            .from('transactions')
+                            .insert([transactionData]);
+
+                        if (syncError) console.error("Webhook Link Sync Error:", syncError);
+                        else console.log("Successfully synced Polar payment to transactions table:", polarOrderId || checkoutId);
+                    }
                 }
             }
         } else if (eventType === 'order.refunded') {
             const order = event.data;
-            const checkoutId = order.checkout_id;
+            const polarOrderId = order.id;
 
-            if (checkoutId) {
-                const { error } = await supabaseClient.from('polar_transactions')
-                    .update({
-                        status: 'refunded',
-                        updated_at: new Date().toISOString(),
-                    })
-                    .eq('checkout_id', checkoutId);
+            // Update log
+            await supabaseClient.from('polar_transactions')
+                .update({ status: 'refunded', updated_at: new Date().toISOString() })
+                .eq('polar_order_id', polarOrderId);
 
-                if (error) {
-                    console.error("Webhook DB Update Error (refund):", error);
-                }
-            }
+            // Update main transaction
+            await supabaseClient.from('transactions')
+                .update({ status: 'refunded' })
+                .eq('gateway_transaction_id', polarOrderId);
         }
 
         // Always return 200 to acknowledge the webhook

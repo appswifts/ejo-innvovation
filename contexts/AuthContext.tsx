@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retries = 3) => {
     try {
       // Query profile with Role and Permissions relations
       const { data, error } = await supabase
@@ -76,13 +76,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
+      if (error && error.code === 'PGRST116' && retries > 0) {
+        // Profile not found yet — the trigger may still be creating it
+        console.log(`Profile not found for ${userId}, retrying in 1s... (${retries} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return fetchProfile(userId, retries - 1);
+      }
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error fetching profile:', error);
       }
 
       if (data) {
         // Flatten permissions for easier access
-        // Typings for the raw join response would be complex, casting partially here
         const rawRole = data.role as any;
         const permissions: string[] = rawRole?.role_permissions?.map((rp: any) => rp.permission?.slug) || [];
 
