@@ -100,7 +100,10 @@ const Login: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-[#0d121b] text-sm font-semibold">Password</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-[#0d121b] text-sm font-semibold">Password</label>
+                  <button type="button" onClick={() => navigate('/forgot-password')} className="text-primary text-sm font-bold hover:underline">Forgot password?</button>
+                </div>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">lock</span>
                   <input

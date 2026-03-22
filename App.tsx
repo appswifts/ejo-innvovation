@@ -5,6 +5,8 @@ import { useAuth } from './contexts/AuthContext';
 
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
 import LandingPage from './pages/Public/LandingPage';
 import JournalsPage from './pages/Public/JournalsPage';
 import JournalDetail from './pages/Public/JournalDetail';
@@ -58,6 +60,8 @@ const App: React.FC = () => {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/journals" element={<JournalsPage />} />
           <Route path="/journals/:id" element={<JournalDetail />} />
           <Route path="/articles/:id" element={<ArticleView />} />

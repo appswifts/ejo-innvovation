@@ -310,7 +310,7 @@ const LandingPage: React.FC = () => {
                   <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">
                     <img
                       alt={journal.title}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full object-contain object-center bg-gray-50 dark:bg-gray-800 p-2 transform group-hover:scale-105 transition-transform duration-500"
                       src={journal.cover_image_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuAyoZCZoi7kBIfs8VITvDq0lHoiOH7m5uC2UEcPPlSIqDRNKq2rF7DH3jc2ol-plu-oyo6siyjL6V-rY3PIc_9vSWiAHHhIInhIxSwyS11NmcjMKGbVrVUN139kZsU2Y-AmnEIvLZ686aAl3Oy4vomPxl9RhzQEuASVUbHoDNZ45nCrY8ZDRUJHoqG-9sV8R20fjs8nyVHvFPtBrJBm_KYhipLAdj_-0ulWUgtoLVwEIo3VblOVEtpeBYa-02ZMQ3_UseLvTZkDSZw3"}
                     />
                     <div className="absolute top-3 left-3">

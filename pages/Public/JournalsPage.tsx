@@ -128,7 +128,7 @@ const JournalsPage: React.FC = () => {
               filteredJournals.map((journal) => (
                 <div key={journal.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row p-6 gap-6">
                   <div className="w-full md:w-48 h-64 md:h-auto flex-shrink-0 bg-slate-100 rounded-lg overflow-hidden">
-                    <img src={journal.cover_image_url || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=2000&auto=format&fit=crop"} className="w-full h-full object-cover" alt="Journal Cover" />
+                    <img src={journal.cover_image_url || "https://images.unsplash.com/photo-1544947950-fa07a98d237f?q=80&w=2000&auto=format&fit=crop"} className="w-full h-full object-contain object-center p-2" alt="Journal Cover" />
                   </div>
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
