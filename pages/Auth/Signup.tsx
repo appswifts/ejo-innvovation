@@ -166,24 +166,6 @@ const Signup: React.FC = () => {
                     <span>Create Account</span>
                   )}
                 </button>
-
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or register with</span>
-                  </div>
-                </div>
-
-                <button
-                  className="w-full bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3.5 rounded-lg flex items-center justify-center gap-3 transition-colors"
-                  type="button"
-                  onClick={() => navigate('/dashboard')}
-                >
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/0/06/ORCID_iD.svg" alt="ORCID" className="w-6 h-6" />
-                  <span>Sign up with ORCID</span>
-                </button>
               </form>
             )}
 

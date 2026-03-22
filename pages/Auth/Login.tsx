@@ -127,13 +127,6 @@ const Login: React.FC = () => {
                   <span>Log In</span>
                 )}
               </button>
-              <button
-                className="w-full bg-orcid hover:bg-[#96bd33] text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-colors shadow-lg shadow-orcid/10"
-                type="button"
-                onClick={() => navigate('/dashboard')}
-              >
-                <span>Continue with ORCID (Demo)</span>
-              </button>
             </form>
             <p className="mt-10 text-center text-sm text-[#4c669a]">
               Don't have an account? <button onClick={() => navigate('/signup')} className="text-primary font-bold hover:underline">Register now</button>
