@@ -104,7 +104,7 @@ const Copyright: React.FC = () => {
                         </div>
                         <p className="text-sm text-slate-600 leading-relaxed mb-4">
                             If you believe content on our platform infringes your copyright, please submit a takedown notice to
-                            <a href="mailto:legal@nkizacenter.com" className="text-primary font-semibold hover:underline ml-1">legal@nkizacenter.com</a>
+                            <a href="mailto:contact@nkiza.com" className="text-primary font-semibold hover:underline ml-1">contact@nkiza.com</a>
                             {' '}including:
                         </p>
                         <ol className="space-y-2 text-sm text-slate-600 list-decimal pl-5">
@@ -134,8 +134,8 @@ const Copyright: React.FC = () => {
                     <h3 className="text-sm font-bold text-slate-900 mb-2">Legal Inquiries</h3>
                     <p className="text-sm text-slate-500">
                         For copyright questions or legal matters, contact{' '}
-                        <a href="mailto:legal@nkizacenter.com" className="text-primary font-semibold hover:underline">
-                            legal@nkizacenter.com
+                        <a href="mailto:contact@nkiza.com" className="text-primary font-semibold hover:underline">
+                            contact@nkiza.com
                         </a>
                     </p>
                 </div>

@@ -54,7 +54,7 @@ While we strive to protect your information, no method of electronic storage is 
 • **Portability**: Receive your data in a structured, machine-readable format.
 • **Opt-out**: Unsubscribe from marketing communications at any time.
 
-To exercise these rights, contact us at privacy@nkizacenter.com.`
+To exercise these rights, contact us at contact@nkiza.com.`
         },
         {
             title: 'Cookies & Tracking',
@@ -106,8 +106,8 @@ To exercise these rights, contact us at privacy@nkizacenter.com.`
                     <h3 className="text-sm font-bold text-slate-900 mb-2">Questions about our privacy practices?</h3>
                     <p className="text-sm text-slate-500">
                         Contact our Data Protection Officer at{' '}
-                        <a href="mailto:privacy@nkizacenter.com" className="text-primary font-semibold hover:underline">
-                            privacy@nkizacenter.com
+                        <a href="mailto:contact@nkiza.com" className="text-primary font-semibold hover:underline">
+                            contact@nkiza.com
                         </a>
                     </p>
                 </div>
