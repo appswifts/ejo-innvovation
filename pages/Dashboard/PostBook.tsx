@@ -26,6 +26,7 @@ const PostBook: React.FC = () => {
         price: 0,
         cover_url: '',
         pdf_url: '',
+        whop_product_id: '',
     });
 
     const canProceedToFiles = formData.title && formData.author_name && formData.type;
@@ -95,6 +96,7 @@ const PostBook: React.FC = () => {
                 price: formData.price,
                 cover_url: formData.cover_url,
                 pdf_url: formData.pdf_url,
+                whop_product_id: formData.whop_product_id || null,
                 seller_id: user.id,
                 status: 'pending',
             }).select().single();
@@ -216,6 +218,17 @@ const PostBook: React.FC = () => {
                                         className="w-full p-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
                                         placeholder="0.00"
                                     />
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Whop Product ID (Optional)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.whop_product_id}
+                                        onChange={(e) => setFormData({ ...formData, whop_product_id: e.target.value })}
+                                        className="w-full p-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-mono"
+                                        placeholder="prod_..."
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">Leave empty to use the default platform ID.</p>
                                 </div>
                             </div>
                             <div>
@@ -422,7 +435,7 @@ const PostBook: React.FC = () => {
                             <button
                                 onClick={() => {
                                     setStep('details');
-                                    setFormData({ title: '', author_name: '', description: '', type: BOOK_TYPES[0].value, price: 0, cover_url: '', pdf_url: '' });
+                                    setFormData({ title: '', author_name: '', description: '', type: BOOK_TYPES[0].value, price: 0, cover_url: '', pdf_url: '', whop_product_id: '' });
                                 }}
                                 className="px-6 py-3 bg-primary text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl transition-all flex items-center gap-2"
                             >
@@ -432,7 +445,7 @@ const PostBook: React.FC = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

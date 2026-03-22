@@ -15,6 +15,7 @@ interface Book {
     title: string;
     pdf_url: string | null;
     seller_id: string | null;
+    price: number;
 }
 
 const BookReader: React.FC = () => {
@@ -40,7 +41,7 @@ const BookReader: React.FC = () => {
             // 1. Fetch Book Details
             const { data: bookData, error: bookError } = await supabase
                 .from('books')
-                .select('id, title, pdf_url, seller_id')
+                .select('id, title, pdf_url, seller_id, price')
                 .eq('id', id)
                 .single();
 
@@ -80,7 +81,32 @@ const BookReader: React.FC = () => {
             if (['super_admin', 'editor'].includes(role?.slug) || transaction || bookData.seller_id === user.id) {
                 setHasAccess(true);
             } else {
-                setHasAccess(false);
+                // 3. Whop Direct Check Fallback
+                try {
+                    const { data: whopCheck, error: whopError } = await supabase.functions.invoke('whop-check', {
+                        body: { email: user.email, refId: id }
+                    });
+
+                    if (!whopError && whopCheck?.hasAccess) {
+                        setHasAccess(true);
+                        // Pro-actively sync to local transactions
+                        await supabase.from('transactions').insert({
+                            user_id: user.id,
+                            amount: bookData.price || 0,
+                            currency: 'USD',
+                            type: 'purchase',
+                            status: 'completed',
+                            payment_gateway: 'whop',
+                            description: `Direct check recovery: ${bookData.title}`,
+                            book_id: id
+                        });
+                    } else {
+                        setHasAccess(false);
+                    }
+                } catch (err) {
+                    console.error("Whop fallback check failed", err);
+                    setHasAccess(false);
+                }
             }
 
         } catch (err) {

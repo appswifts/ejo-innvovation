@@ -8,6 +8,7 @@ interface ItemDetails {
     price: number;
     currency: string;
     description?: string;
+    whop_product_id?: string | null;
 }
 
 const CheckoutPage: React.FC = () => {
@@ -23,7 +24,7 @@ const CheckoutPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar'>('polar');
+    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar' | 'whop'>('manual');
     const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -47,7 +48,7 @@ const CheckoutPage: React.FC = () => {
             if (type === 'book') {
                 const { data, error } = await supabase
                     .from('books')
-                    .select('title, price')
+                    .select('title, price, whop_product_id')
                     .eq('id', id)
                     .single();
                 if (error) throw error;
@@ -55,7 +56,7 @@ const CheckoutPage: React.FC = () => {
             } else if (type === 'manuscript') {
                 const { data: manuscript, error: manError } = await supabase
                     .from('manuscripts')
-                    .select('title')
+                    .select('title, whop_product_id')
                     .eq('id', id)
                     .single();
                 if (manError) throw manError;
@@ -63,7 +64,7 @@ const CheckoutPage: React.FC = () => {
                 if (packageId) {
                     const { data: pkg, error: pkgError } = await supabase
                         .from('publication_packages')
-                        .select('name, price, currency')
+                        .select('name, price, currency, whop_product_id')
                         .eq('id', packageId)
                         .single();
                     if (pkgError) throw pkgError;
@@ -71,13 +72,14 @@ const CheckoutPage: React.FC = () => {
                         title: `APC Fee: ${manuscript.title}`,
                         price: parseFloat(pkg.price),
                         currency: pkg.currency,
-                        description: `Package: ${pkg.name}`
+                        description: `Package: ${pkg.name}`,
+                        whop_product_id: pkg.whop_product_id || manuscript.whop_product_id
                     });
                 }
             } else if (type === 'article') {
                 const { data, error } = await supabase
                     .from('manuscripts')
-                    .select('title, price, currency')
+                    .select('title, price, currency, whop_product_id')
                     .eq('id', id)
                     .single();
                 if (error) throw error;
@@ -85,7 +87,8 @@ const CheckoutPage: React.FC = () => {
                     title: `Article Access: ${data.title}`,
                     price: data.price || 0,
                     currency: data.currency || 'USD',
-                    description: 'Full text access (PDF download)'
+                    description: 'Full text access (PDF download)',
+                    whop_product_id: data.whop_product_id
                 });
             } else if (type === 'subscription') {
                 const { data: journal, error: journalError } = await supabase
@@ -99,7 +102,7 @@ const CheckoutPage: React.FC = () => {
 
                 const { data: pkg, error: pkgError } = await supabase
                     .from('publication_packages')
-                    .select('name, price, currency')
+                    .select('name, price, currency, whop_product_id')
                     .eq('id', journal.subscription_package_id)
                     .single();
                 if (pkgError) throw pkgError;
@@ -108,7 +111,8 @@ const CheckoutPage: React.FC = () => {
                     title: `Subscription: ${journal.title}`,
                     price: parseFloat(pkg.price),
                     currency: pkg.currency,
-                    description: `Package: ${pkg.name} (Access to all articles)`
+                    description: `Package: ${pkg.name} (Access to all articles)`,
+                    whop_product_id: pkg.whop_product_id
                 });
             }
         } catch (error) {
@@ -130,6 +134,38 @@ const CheckoutPage: React.FC = () => {
             setPaymentSettings(map);
         }
     };
+
+    // Helper to interpret boolean flags from settings (stored as strings)
+    const isEnabled = (key: string, defaultValue: boolean) => {
+        const raw = paymentSettings[key];
+        if (raw === undefined) return defaultValue;
+        const normalized = raw.toLowerCase();
+        if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+        if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+        return defaultValue;
+    };
+
+    const itemWhopProductId = (item as any)?.whop_product_id;
+
+    const whopUrl = itemWhopProductId
+        ? `https://whop.com/checkout/${itemWhopProductId}`
+        : (type === 'subscription' && paymentSettings.whop_subscription_checkout_url) ||
+        (type === 'article' && paymentSettings.whop_article_checkout_url) ||
+        (type === 'book' && paymentSettings.whop_book_checkout_url) ||
+        // Check if whop_checkout_url is just a product ID or a full URL
+        (paymentSettings.whop_checkout_url?.startsWith('http')
+            ? paymentSettings.whop_checkout_url
+            : `https://whop.com/checkout/${paymentSettings.whop_checkout_url}`);
+
+    const isWhopEnabled = false;
+    const isPolarEnabled = false;
+    const isManualEnabled = true;
+
+    // Default to manual
+    useEffect(() => {
+        if (!item) return;
+        setPaymentMethod('manual');
+    }, [item]);
 
     const handleConfirmOrder = async () => {
         if (!user || !item) return;
@@ -170,6 +206,65 @@ const CheckoutPage: React.FC = () => {
 
                 setOrderSuccess(true);
                 setProcessing(false);
+                return;
+            }
+
+            // Guard against selecting a disabled method
+            if (paymentMethod === 'whop' && !isWhopEnabled) {
+                alert('Whop payments are currently disabled. Please choose another payment method.');
+                setProcessing(false);
+                return;
+            }
+            if (paymentMethod === 'polar' && !isPolarEnabled) {
+                alert('Polar payments are currently disabled. Please choose another payment method.');
+                setProcessing(false);
+                return;
+            }
+            if (paymentMethod === 'manual' && !isManualEnabled) {
+                alert('Manual bank transfers are currently disabled. Please choose another payment method.');
+                setProcessing(false);
+                return;
+            }
+
+            if (paymentMethod === 'whop') {
+                // Whop checkout via dynamic API checkout session
+                const whopProductId = paymentSettings.whop_checkout_url || 'prod_PiiwGSfXpchGv';
+
+                if (!whopProductId) {
+                    alert('Whop is not configured. Please contact the site administrator.');
+                    setProcessing(false);
+                    return;
+                }
+
+                try {
+                    const { data: result, error: fnError } = await supabase.functions.invoke('whop-checkout', {
+                        body: {
+                            productId: whopProductId,
+                            price: item?.price || 0,
+                            currency: item?.currency || 'usd',
+                            itemName: item?.title || '',
+                            email: user.email || '',
+                            userId: user.id,
+                            itemId: id || '',
+                            itemType: type || '',
+                            packageId: packageId || '',
+                            returnUrl: window.location.origin + '/dashboard',
+                        },
+                    });
+
+                    if (fnError || !result?.checkoutUrl) {
+                        console.error('Whop checkout error:', fnError || result);
+                        alert('Failed to create Whop checkout. Please try again or choose another payment method.');
+                        setProcessing(false);
+                        return;
+                    }
+
+                    window.location.href = result.checkoutUrl;
+                } catch (whopError) {
+                    console.error('Whop checkout error:', whopError);
+                    alert('Failed to create checkout session. Please try again.');
+                    setProcessing(false);
+                }
                 return;
             }
 
@@ -289,18 +384,16 @@ const CheckoutPage: React.FC = () => {
                     {!isFree && (
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left mb-8">
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Payment Instructions</p>
-                            <div className="space-y-3">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400">Bank Name</p>
-                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_name || 'National Bank of Rwanda'}</p>
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-slate-900">Account number: 100166537511</p>
+                                    <p className="text-sm font-bold text-slate-900">Bank name: Bank of Kigali</p>
+                                    <p className="text-sm font-bold text-slate-900">Account name: Nkiza ltd</p>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400">Account Number</p>
-                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_account_number || '000123-456789-01'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400">Account Name</p>
-                                    <p className="text-sm font-bold text-slate-900">{paymentSettings.bank_account_name || 'Nkiza Academic Journals Ltd'}</p>
+                                <div className="h-px bg-slate-200 my-4"></div>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-bold text-slate-900">Mtn momo code: *182*8*1*912672#</p>
+                                    <p className="text-sm font-bold text-slate-900">Names: Parfai</p>
                                 </div>
                             </div>
                         </div>
@@ -353,7 +446,7 @@ const CheckoutPage: React.FC = () => {
                     <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                         <span className="material-symbols-outlined text-amber-600">info</span>
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                            <strong>Note:</strong> {paymentSettings.payment_note || 'We currently support manual bank transfers and Polar online payments. After confirming your order, you will receive our bank details. Your purchase will be activated after our finance team verifies the transfer.'}
+                            <strong>Note:</strong> We currently only support manual payments (Bank Transfer and MTN Mobile Money). Your content will be activated once payment is verified.
                         </p>
                     </div>
 
@@ -361,28 +454,12 @@ const CheckoutPage: React.FC = () => {
                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mt-8">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 underline decoration-primary decoration-4 underline-offset-8">Payment Method</p>
                         <div className="space-y-4">
-                            <div
-                                onClick={() => setPaymentMethod('polar')}
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'polar' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
-                            >
+                            <div className="p-4 rounded-xl border-2 border-primary bg-primary/5 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'polar' ? 'border-primary' : 'border-slate-300'}`}>
-                                        {paymentMethod === 'polar' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
+                                    <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
                                     </div>
-                                    <span className="font-bold text-slate-900">Pay with Card / Mobile Money</span>
-                                </div>
-                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Polar</span>
-                            </div>
-
-                            <div
-                                onClick={() => setPaymentMethod('manual')}
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${paymentMethod === 'manual' ? 'border-primary bg-primary/5' : 'border-slate-100 hover:border-slate-300'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'manual' ? 'border-primary' : 'border-slate-300'}`}>
-                                        {paymentMethod === 'manual' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
-                                    </div>
-                                    <span className="font-bold text-slate-900">Manual Bank Transfer</span>
+                                    <span className="font-bold text-slate-900">Manual Payment (Bank / MTN Momo)</span>
                                 </div>
                                 <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Offline</span>
                             </div>

@@ -140,9 +140,37 @@ const ArticleView: React.FC = () => {
 
     if (purchase) {
       setHasAccess(true);
-    } else {
+      setCheckingAccess(false);
+      return;
+    }
+
+    // 5. Whop Direct Check Fallback
+    try {
+      const { data: whopCheck, error: whopError } = await supabase.functions.invoke('whop-check', {
+        body: { email: user.email, refId: article.id }
+      });
+
+      if (!whopError && whopCheck?.hasAccess) {
+        setHasAccess(true);
+        // Also pro-actively sync this to transactions table for future fast-checks
+        await supabase.from('transactions').insert({
+          user_id: user.id,
+          amount: article.price,
+          currency: article.currency,
+          type: 'purchase',
+          status: 'completed',
+          payment_gateway: 'whop',
+          description: `Direct check recovery: ${article.title}`,
+          manuscript_id: article.id
+        });
+      } else {
+        setHasAccess(false);
+      }
+    } catch (err) {
+      console.error("Whop fallback check failed", err);
       setHasAccess(false);
     }
+
     setCheckingAccess(false);
   };
 
