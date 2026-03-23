@@ -6,6 +6,7 @@ interface Partner {
     id: string;
     name: string;
     logo_url: string | null;
+    website_url: string | null;
     description: string | null;
     is_active: boolean;
     created_at: string;
@@ -25,6 +26,7 @@ const PartnerManagement: React.FC = () => {
     const [formData, setFormData] = useState({
         name: '',
         logo_url: '',
+        website_url: '',
         description: '',
         is_active: true,
     });
@@ -54,6 +56,7 @@ const PartnerManagement: React.FC = () => {
         setFormData({
             name: partner.name,
             logo_url: partner.logo_url || '',
+            website_url: partner.website_url || '',
             description: partner.description || '',
             is_active: partner.is_active,
         });
@@ -64,7 +67,7 @@ const PartnerManagement: React.FC = () => {
     const handleClose = () => {
         setIsModalOpen(false);
         setSelectedPartner(null);
-        setFormData({ name: '', logo_url: '', description: '', is_active: true });
+        setFormData({ name: '', logo_url: '', website_url: '', description: '', is_active: true });
         setUseUrlInput(false);
         setDragOver(false);
     };
@@ -136,6 +139,7 @@ const PartnerManagement: React.FC = () => {
             const payload = {
                 name: formData.name,
                 logo_url: formData.logo_url || null,
+                website_url: formData.website_url || null,
                 description: formData.description || null,
                 is_active: formData.is_active,
                 updated_at: new Date().toISOString(),
@@ -227,7 +231,13 @@ const PartnerManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <p className="text-sm text-slate-500 truncate max-w-[300px]">{partner.description || '—'}</p>
+                                                <p className="text-sm text-slate-500 truncate max-w-[220px]">{partner.description || '—'}</p>
+                                                {partner.website_url && (
+                                                    <a href={partner.website_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5">
+                                                        <span className="material-symbols-outlined text-xs" style={{fontSize:'13px'}}>link</span>
+                                                        {partner.website_url.replace(/^https?:\/\//, '')}
+                                                    </a>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`flex items-center gap-1.5 text-xs font-bold ${partner.is_active ? 'text-green-600' : 'text-slate-400'}`}>
@@ -343,6 +353,23 @@ const PartnerManagement: React.FC = () => {
                                 )}
                             </div>
                         )}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-1">Website URL</label>
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span className="material-symbols-outlined text-slate-400 text-lg">link</span>
+                            </span>
+                            <input
+                                name="website_url"
+                                type="url"
+                                value={formData.website_url}
+                                onChange={handleChange}
+                                className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-300 focus:primary-ring"
+                                placeholder="https://example.com"
+                            />
+                        </div>
                     </div>
 
                     <div>
