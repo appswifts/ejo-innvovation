@@ -94,7 +94,6 @@ const Overview: React.FC = () => {
         { label: 'Total Manuscripts', value: stats.totalManuscripts.toString(), icon: 'article', color: 'bg-blue-50 text-blue-600' },
         { label: profile?.role?.slug === 'author' ? 'Under Review' : 'Pending Action', value: stats.pendingReviews.toString(), icon: 'pending_actions', color: 'bg-amber-50 text-amber-600' },
         { label: 'Published Articles', value: stats.published.toString(), icon: 'check_circle', color: 'bg-green-50 text-green-600' },
-        { label: profile?.role?.slug === 'author' ? 'Total Payments' : 'Total Revenue', value: `$${stats.totalEarnings.toFixed(2)}`, icon: 'paid', color: 'bg-indigo-50 text-indigo-600' },
     ];
 
     if (loading) {

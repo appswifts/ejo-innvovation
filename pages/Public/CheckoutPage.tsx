@@ -446,7 +446,8 @@ const CheckoutPage: React.FC = () => {
                     <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                         <span className="material-symbols-outlined text-amber-600">info</span>
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                            <strong>Note:</strong> We currently only support manual payments (Bank Transfer and MTN Mobile Money). Your content will be activated once payment is verified.
+                            <strong>Note:</strong> We currently only support manual payments (Bank Transfer and MTN Mobile Money). Your content will be activated once payment is verified.{' '}
+                            After paying, please call or text us on WhatsApp at <strong>+250 732 752 616</strong> so we can approve your payment as fast as possible.
                         </p>
                     </div>
 
