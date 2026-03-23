@@ -112,7 +112,16 @@ const ManuscriptDetailPage: React.FC = () => {
         if (!selectedReviewer || !manuscript) return;
         try {
             setAssigningReviewer(true);
-            // Upsert into reviews table
+
+            // Remove any existing reviewer assignment for this manuscript first
+            const { error: deleteError } = await supabase
+                .from('reviews')
+                .delete()
+                .eq('manuscript_id', manuscript.id);
+
+            if (deleteError) throw deleteError;
+
+            // Insert new reviewer assignment
             const { error } = await supabase.from('reviews').insert({
                 manuscript_id: manuscript.id,
                 reviewer_id: selectedReviewer,
@@ -121,6 +130,7 @@ const ManuscriptDetailPage: React.FC = () => {
                 due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 2 weeks
             });
             if (error) throw error;
+
             const reviewer = reviewers.find(r => r.id === selectedReviewer);
             setCurrentReviewer(reviewer ? { id: reviewer.id, full_name: reviewer.full_name } : null);
             alert(`Reviewer assigned successfully!`);
