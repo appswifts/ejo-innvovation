@@ -472,7 +472,7 @@ const ManuscriptDetailPage: React.FC = () => {
             <main className="flex flex-1 overflow-hidden">
                 {/* Left: Content Area */}
                 <section className="flex-1 bg-slate-100 p-8 overflow-y-auto">
-                    <div className="max-w-3xl mx-auto bg-white shadow-sm border border-slate-200 min-h-screen p-12 rounded-xl">
+                    <div className="max-w-3xl mx-auto bg-white shadow-sm border border-slate-200 min-h-screen p-12 rounded-xl" style={{ fontSize: '1.08rem', lineHeight: '1.85' }}>
                         <div className="mb-12">
                             <div className="flex justify-between items-start mb-6">
                                 {isEditing ? (
@@ -560,7 +560,7 @@ const ManuscriptDetailPage: React.FC = () => {
                                         placeholder="Enter manuscript abstract..."
                                     />
                                 ) : (
-                                    <p className="text-slate-700 leading-relaxed text-justify whitespace-pre-wrap">
+                                    <p className="text-slate-700 leading-relaxed text-justify whitespace-pre-wrap text-[1.05rem]">
                                         {manuscript.abstract || 'No abstract provided.'}
                                     </p>
                                 )}
@@ -577,7 +577,7 @@ const ManuscriptDetailPage: React.FC = () => {
                                             placeholder="Enter cover letter..."
                                         />
                                     ) : (
-                                        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">{manuscript.cover_letter}</p>
+                                        <p className="text-slate-600 leading-relaxed whitespace-pre-wrap text-[1.05rem]">{manuscript.cover_letter}</p>
                                     )}
                                 </section>
                             )}
@@ -624,13 +624,17 @@ const ManuscriptDetailPage: React.FC = () => {
                                         )}
                                     </div>
                                 ) : (
-                                    manuscript.file_url ? (
-                                        <button onClick={handleDownload} disabled={downloading} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all shadow-md shadow-primary/20 disabled:opacity-50">
-                                            <span className="material-symbols-outlined text-[18px]">{downloading ? 'hourglass_empty' : 'download'}</span>
-                                            {downloading ? 'Downloading...' : 'Download Full File'}
-                                        </button>
+                                    isEditor ? (
+                                        manuscript.file_url ? (
+                                            <button onClick={handleDownload} disabled={downloading} className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary-dark transition-all shadow-md shadow-primary/20 disabled:opacity-50">
+                                                <span className="material-symbols-outlined text-[18px]">{downloading ? 'hourglass_empty' : 'download'}</span>
+                                                {downloading ? 'Downloading...' : 'Download Full File'}
+                                            </button>
+                                        ) : (
+                                            <span className="text-xs text-slate-400 italic">No file attached</span>
+                                        )
                                     ) : (
-                                        <span className="text-xs text-slate-400 italic">No file attached</span>
+                                        <span className="text-xs text-slate-500 italic">Available to authorized users only</span>
                                     )
                                 )}
                             </div>

@@ -25,6 +25,7 @@ const BookReader: React.FC = () => {
     const [book, setBook] = useState<Book | null>(null);
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    const [isEditor, setIsEditor] = useState(false);
     const [numPages, setNumPages] = useState<number>(0);
     const flipBookRef = useRef<any>(null);
 
@@ -78,7 +79,12 @@ const BookReader: React.FC = () => {
                 .eq('id', profile?.role_id)
                 .single();
 
-            if (['super_admin', 'editor'].includes(role?.slug) || transaction || bookData.seller_id === user.id) {
+            const isUserEditor = ['super_admin', 'editor'].includes(role?.slug);
+            if (isUserEditor) {
+                setIsEditor(true);
+            }
+
+            if (isUserEditor || transaction || bookData.seller_id === user.id) {
                 setHasAccess(true);
             } else {
                 // 3. Whop Direct Check Fallback
@@ -228,13 +234,15 @@ const BookReader: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleDownload}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
-                        title="Download PDF"
-                    >
-                        <span className="material-symbols-outlined">download</span>
-                    </button>
+                    {isEditor && (
+                        <button
+                            onClick={handleDownload}
+                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                            title="Download PDF"
+                        >
+                            <span className="material-symbols-outlined">download</span>
+                        </button>
+                    )}
                     <button
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
                         onClick={() => {
@@ -254,7 +262,7 @@ const BookReader: React.FC = () => {
 
             {/* Flipbook Container */}
             <main className="flex-1 flex flex-col items-center justify-center p-8 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-                <div className="w-full max-w-[1200px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+                <div className="w-full max-w-[1400px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
                     <Document
                         file={book.pdf_url}
                         onLoadSuccess={onDocumentLoadSuccess}
@@ -265,13 +273,13 @@ const BookReader: React.FC = () => {
                         }
                     >
                         <HTMLFlipBook
-                            width={500}
-                            height={700}
+                            width={700}
+                            height={980}
                             size="stretch"
                             minWidth={315}
-                            maxWidth={1000}
+                            maxWidth={1400}
                             minHeight={400}
-                            maxHeight={1533}
+                            maxHeight={1960}
                             maxShadowOpacity={0.5}
                             showCover={true}
                             mobileScrollSupport={true}
@@ -297,7 +305,7 @@ const BookReader: React.FC = () => {
                                 <div key={`page_${index + 1}`} className="bg-white shadow-inner">
                                     <Page
                                         pageNumber={index + 1}
-                                        width={500}
+                                        width={700}
                                         renderTextLayer={false}
                                         renderAnnotationLayer={false}
                                     />
