@@ -66,7 +66,7 @@ const BookGuidelines: React.FC = () => {
                         </h3>
                         <div className="space-y-3">
                             {[
-                                { icon: 'payments', text: 'Submission Fee: 172 USD (or equivalent in Rwandan Francs).' },
+                                { icon: 'payments', text: 'Submission Fee: 200,000 RWF.' },
                                 { icon: 'description', text: 'Maximum Length: 60 pages.' },
                                 { icon: 'add_circle', text: 'If the author wishes to publish more than 60 pages, additional review fees will apply for the extra pages, based on the current review rate charged by Nkiza Center for Research.' },
                                 { icon: 'translate', text: 'Manuscripts must be written in clear, professional English, French, or Kinyarwanda.' },
@@ -144,7 +144,7 @@ const BookGuidelines: React.FC = () => {
                         </h3>
                         <div className="space-y-3">
                             {[
-                                { icon: 'payments', text: 'Submission Fee: 172 USD (or equivalent in Rwandan Francs).' },
+                                { icon: 'payments', text: 'Submission Fee: 200,000 RWF.' },
                                 { icon: 'description', text: 'Maximum Length: 60 pages.' },
                                 { icon: 'add_circle', text: 'If the author wishes to publish more than 60 pages, additional review fees will apply for the extra pages, based on the current rate charged.' },
                                 { icon: 'edit_note', text: 'Manuscripts must be professionally written in English, French, or Kinyarwanda and carefully proofread.' },

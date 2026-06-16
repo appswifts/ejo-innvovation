@@ -49,7 +49,7 @@ const FinanceDashboard: React.FC = () => {
     name: '',
     type: 'apc',
     price: '',
-    currency: 'USD',
+    currency: 'RWF',
     description: '',
     duration_months: '',
     is_active: true
@@ -158,7 +158,7 @@ const FinanceDashboard: React.FC = () => {
       name: '',
       type: 'apc',
       price: '',
-      currency: 'USD',
+      currency: 'RWF',
       description: '',
       duration_months: '',
       is_active: true
@@ -286,7 +286,7 @@ const FinanceDashboard: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="font-bold text-slate-900">{pkg.currency} {pkg.price.toFixed(2)}</span>
+                            <span className="font-bold text-slate-900">{(pkg.price || 0).toLocaleString()} RWF</span>
                             {pkg.duration_months && <span className="text-slate-500 text-xs ml-1">/ {pkg.duration_months}mo</span>}
                           </td>
                           <td className="px-6 py-4">
@@ -359,7 +359,7 @@ const FinanceDashboard: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                            {order.currency} {order.amount.toFixed(2)}
+                            {(order.amount || 0).toLocaleString()} RWF
                           </td>
                           <td className="px-6 py-4">
                             <select

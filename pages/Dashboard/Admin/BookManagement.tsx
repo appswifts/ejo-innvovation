@@ -316,7 +316,7 @@ const BookManagement: React.FC = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 font-medium text-slate-900">
-                                        ${book.price}
+                                        {book.price.toLocaleString()} RWF
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-600">
                                         {book.royalty_percentage}%
@@ -425,7 +425,7 @@ const BookManagement: React.FC = () => {
                                     </select>
                                 </div>
                                 <div className="col-span-1">
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Price (USD)</label>
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Price (RWF)</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
                                         <input

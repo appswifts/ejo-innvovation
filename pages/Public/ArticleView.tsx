@@ -176,7 +176,6 @@ const ArticleView: React.FC = () => {
 
   const handleDownload = async () => {
     if (!hasAccess) {
-      // Should not happen if UI is correct, but safe guard
       alert("Please purchase this article to download.");
       return;
     }
@@ -193,6 +192,22 @@ const ArticleView: React.FC = () => {
         if (match) path = match[1];
       }
 
+      // For open access journals, try to use a public URL first to avoid auth issues
+      if (article.journal?.is_open_access) {
+        // If it's a direct public URL, use it
+        if (article.file_url.startsWith('http')) {
+          window.open(article.file_url, '_blank');
+          return;
+        }
+        // Otherwise try to get public URL
+        const { data } = supabase.storage.from('manuscripts').getPublicUrl(path);
+        if (data?.publicUrl) {
+          window.open(data.publicUrl, '_blank');
+          return;
+        }
+      }
+
+      // For paid content, use signed URL (requires auth)
       const { data, error } = await supabase.storage
         .from('manuscripts')
         .createSignedUrl(path, 60);
@@ -233,7 +248,7 @@ const ArticleView: React.FC = () => {
           user_id: user.id,
           manuscript_id: article?.id,
           amount: 0,
-          currency: article?.currency || 'USD',
+          currency: article?.currency || 'RWF',
           type: 'purchase',
           status: 'completed',
           description: `Free access: ${article?.title}`,
@@ -361,7 +376,7 @@ const ArticleView: React.FC = () => {
                       <span className="material-symbols-outlined text-primary text-3xl mb-4">description</span>
                       <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Individual Paper</div>
                       <div className="text-2xl font-black text-slate-900 mb-6 text-center">
-                        {(article.price || 0) <= 0 ? (isPaidJournal ? 'Subscription Required' : 'Free') : `${article.currency || 'USD'} ${(article.price || 0).toFixed(2)}`}
+                        {(article.price || 0) <= 0 ? (isPaidJournal ? 'Subscription Required' : 'Free') : `${(article.price || 0).toLocaleString()} RWF`}
                       </div>
                       <button
                         onClick={handlePurchase}

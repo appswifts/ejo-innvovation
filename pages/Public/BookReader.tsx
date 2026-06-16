@@ -99,7 +99,7 @@ const BookReader: React.FC = () => {
                         await supabase.from('transactions').insert({
                             user_id: user.id,
                             amount: bookData.price || 0,
-                            currency: 'USD',
+                            currency: 'RWF',
                             type: 'purchase',
                             status: 'completed',
                             payment_gateway: 'whop',

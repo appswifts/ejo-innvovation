@@ -55,7 +55,7 @@ const LandingPage: React.FC = () => {
       setLoading(true);
       const [journalsRes, booksRes, partnersRes] = await Promise.all([
         supabase.from('journals').select('id, title, discipline, cover_image_url').limit(4),
-        supabase.from('books').select('id, title, author_name, cover_url, price').limit(4),
+        supabase.from('books').select('id, title, author_name, cover_url, price').eq('status', 'approved').order('created_at', { ascending: false }).limit(4),
         supabase.from('partners').select('id, name, logo_url, description').eq('is_active', true).order('name').limit(6)
       ]);
 
@@ -208,7 +208,7 @@ const LandingPage: React.FC = () => {
                       className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
                       src={book.cover_url || "https://lh3.googleusercontent.com/aida-public/AB6AXuArEDxU29cWPFV4shbv0ktfN0jxhmNuhkxP_3ObDIXjsVmPpCaEFrmC6JX3XeL-a5IfyADnBd9E1ugm0WU4NlrxN3krjobYM2Oq3OMi4SZAks-CB1rpO8NFWoyiSdIYX1KYZcBdW342V5lMzK53Zl4W9j2vTfZFYHQNehotPmvgkl4q9ryFekK555NFidGlLM5C77ddRztlVTjbsyi810n_LYFEwz0faINZRZe0CvWjl3CK5GNdgugj-HLWoM2Zg2qzfp2WZecVCd8B"}
                     />
-                    <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow-md">${book.price}</div>
+                    <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold px-2 py-1 rounded shadow-md">{book.price <= 0 ? 'Free' : `${parseFloat(book.price).toLocaleString()} RWF`}</div>
                   </div>
                   <div className="mt-4">
                     <h4 className="font-bold text-gray-900 dark:text-white text-lg group-hover:text-primary transition-colors line-clamp-1">{book.title}</h4>

@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
                         const transactionData = {
                             user_id: userId,
                             amount: data.amount / 100, // Polar amounts are in cents
-                            currency: data.currency?.toUpperCase() || 'USD',
+                            currency: data.currency?.toUpperCase() || 'RWF',
                             status: 'completed',
                             payment_gateway: 'polar',
                             gateway_transaction_id: polarOrderId || checkoutId,

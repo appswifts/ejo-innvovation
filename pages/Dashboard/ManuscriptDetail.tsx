@@ -53,7 +53,7 @@ const ManuscriptDetailPage: React.FC = () => {
         abstract: '',
         cover_letter: '',
         price: 0,
-        currency: 'USD'
+        currency: 'RWF'
     });
     const [newFile, setNewFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -86,25 +86,43 @@ const ManuscriptDetailPage: React.FC = () => {
     const fetchReviewers = async () => {
         const { data } = await supabase
             .from('profiles')
-            .select('id, full_name, email, role:role_id(slug)')
+            .select('id, full_name, email, roles!inner(slug)')
+            .eq('roles.slug', 'reviewer')
             .order('full_name');
         if (data) {
-            // Allow any user to be assigned as reviewer
             setReviewers(data.map((d: any) => ({ id: d.id, full_name: d.full_name || d.email, email: d.email })));
         }
     };
 
     const fetchReviewAssignment = async (manuscriptId: string) => {
-        const { data } = await supabase
-            .from('reviews')
-            .select('reviewer:profiles!reviews_reviewer_id_fkey(id, full_name)')
-            .eq('manuscript_id', manuscriptId)
-            .order('assigned_at', { ascending: false })
-            .limit(1);
-        if (data && data.length > 0 && data[0].reviewer) {
-            const rev = data[0].reviewer as any;
-            setCurrentReviewer({ id: rev.id, full_name: rev.full_name });
-            setSelectedReviewer(rev.id);
+        try {
+            const { data, error } = await supabase
+                .from('reviews')
+                .select('reviewer_id, assigned_at')
+                .eq('manuscript_id', manuscriptId)
+                .order('assigned_at', { ascending: false })
+                .limit(1);
+
+            if (error) {
+                console.error('Error fetching review assignment:', error);
+                return;
+            }
+
+            if (data && data.length > 0 && data[0].reviewer_id) {
+                const reviewerId = data[0].reviewer_id;
+                // Fetch reviewer details separately
+                const { data: reviewerData } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('id', reviewerId)
+                    .single();
+                if (reviewerData) {
+                    setCurrentReviewer({ id: reviewerData.id, full_name: reviewerData.full_name });
+                    setSelectedReviewer(reviewerData.id);
+                }
+            }
+        } catch (err) {
+            console.error('Error in fetchReviewAssignment:', err);
         }
     };
 
@@ -113,30 +131,46 @@ const ManuscriptDetailPage: React.FC = () => {
         try {
             setAssigningReviewer(true);
 
-            // Remove any existing reviewer assignment for this manuscript first
-            const { error: deleteError } = await supabase
+            // Check if a review already exists for this manuscript
+            const { data: existingReviews } = await supabase
                 .from('reviews')
-                .delete()
+                .select('id')
                 .eq('manuscript_id', manuscript.id);
 
-            if (deleteError) throw deleteError;
+            const now = new Date().toISOString();
+            const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-            // Insert new reviewer assignment
-            const { error } = await supabase.from('reviews').insert({
-                manuscript_id: manuscript.id,
-                reviewer_id: selectedReviewer,
-                status: 'invited',
-                assigned_at: new Date().toISOString(),
-                due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 2 weeks
-            });
-            if (error) throw error;
+            if (existingReviews && existingReviews.length > 0) {
+                // Update existing review
+                const { error } = await supabase
+                    .from('reviews')
+                    .update({
+                        reviewer_id: selectedReviewer,
+                        status: 'invited',
+                        assigned_at: now,
+                        due_date: dueDate
+                    })
+                    .eq('id', existingReviews[0].id);
+
+                if (error) throw error;
+            } else {
+                // Insert new reviewer assignment
+                const { error } = await supabase.from('reviews').insert({
+                    manuscript_id: manuscript.id,
+                    reviewer_id: selectedReviewer,
+                    status: 'invited',
+                    assigned_at: now,
+                    due_date: dueDate
+                });
+                if (error) throw error;
+            }
 
             const reviewer = reviewers.find(r => r.id === selectedReviewer);
             setCurrentReviewer(reviewer ? { id: reviewer.id, full_name: reviewer.full_name } : null);
             alert(`Reviewer assigned successfully!`);
         } catch (error: any) {
             console.error('Error assigning reviewer:', error);
-            alert('Error: ' + error.message);
+            alert('Error assigning reviewer: ' + (error.message || 'Unknown error. Please check if you have permission to assign reviewers.'));
         } finally {
             setAssigningReviewer(false);
         }
@@ -269,7 +303,7 @@ const ManuscriptDetailPage: React.FC = () => {
                     abstract: editForm.abstract,
                     cover_letter: editForm.cover_letter,
                     price: parseFloat(editForm.price.toString()) || 0,
-                    currency: editForm.currency || 'USD',
+                    currency: editForm.currency || 'RWF',
                     file_url: fileUrl,
                     updated_at: new Date().toISOString()
                 })
@@ -283,7 +317,7 @@ const ManuscriptDetailPage: React.FC = () => {
                 abstract: editForm.abstract,
                 cover_letter: editForm.cover_letter,
                 price: parseFloat(editForm.price.toString()) || 0,
-                currency: editForm.currency || 'USD',
+                currency: editForm.currency || 'RWF',
                 file_url: fileUrl
             });
 
@@ -307,7 +341,7 @@ const ManuscriptDetailPage: React.FC = () => {
                 abstract: manuscript.abstract || '',
                 cover_letter: manuscript.cover_letter || '',
                 price: manuscript.price || 0,
-                currency: manuscript.currency || 'USD'
+                currency: manuscript.currency || 'RWF'
             });
         }
     }, [manuscript]);
@@ -356,7 +390,7 @@ const ManuscriptDetailPage: React.FC = () => {
             // 1. Create a manual transaction record
             const { error: txError } = await supabase.from('transactions').insert({
                 amount: 0, // 0 for manual/waiver, or maybe we should ask for amount? keeping simple for now
-                currency: 'USD',
+                currency: 'RWF',
                 status: 'completed',
                 type: 'manual_payment',
                 description: `Manual payment marked by Admin (${profile.full_name})`,
@@ -503,9 +537,9 @@ const ManuscriptDetailPage: React.FC = () => {
                                                     onChange={(e) => setEditForm({ ...editForm, currency: e.target.value })}
                                                     className="w-full text-lg font-bold text-slate-900 border-b-2 border-primary/20 focus:border-primary outline-none py-2 bg-transparent transition-all"
                                                 >
+                                                    <option value="RWF">RWF</option>
                                                     <option value="USD">USD</option>
                                                     <option value="EUR">EUR</option>
-                                                    <option value="RWF">RWF</option>
                                                     <option value="GBP">GBP</option>
                                                 </select>
                                             </div>
@@ -545,7 +579,7 @@ const ManuscriptDetailPage: React.FC = () => {
                                 <div>
                                     <span className="font-bold text-slate-400 uppercase text-[10px] block tracking-widest mb-1">Pricing</span>
                                     <span className="font-medium text-slate-900">
-                                        {manuscript.price > 0 ? `${manuscript.currency} ${manuscript.price.toFixed(2)}` : 'Free / Open'}
+                                        {manuscript.price > 0 ? `${(manuscript.price || 0).toLocaleString()} RWF` : 'Free / Open'}
                                     </span>
                                 </div>
                             </div>
@@ -650,7 +684,7 @@ const ManuscriptDetailPage: React.FC = () => {
                                                 abstract: manuscript.abstract || '',
                                                 cover_letter: manuscript.cover_letter || '',
                                                 price: manuscript.price || 0,
-                                                currency: manuscript.currency || 'USD'
+                                                currency: manuscript.currency || 'RWF'
                                             });
                                         }}
                                         disabled={uploading || updatingStatus}

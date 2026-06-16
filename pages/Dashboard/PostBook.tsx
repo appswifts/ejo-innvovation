@@ -6,7 +6,7 @@ import { BOOK_TYPES, BookType } from '../../types';
 
 type Step = 'details' | 'files' | 'payment' | 'complete';
 
-const BOOK_POSTING_FEE = 25.00;
+const BOOK_POSTING_FEE = 25000;
 
 const PostBook: React.FC = () => {
     const navigate = useNavigate();
@@ -107,7 +107,7 @@ const PostBook: React.FC = () => {
             await supabase.from('transactions').insert({
                 user_id: user.id,
                 amount: BOOK_POSTING_FEE,
-                currency: 'USD',
+                currency: 'RWF',
                 type: 'book_purchase',
                 status: 'completed',
                 payment_method: 'mock_payment',
@@ -208,7 +208,7 @@ const PostBook: React.FC = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Selling Price (USD)</label>
+                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Selling Price (RWF)</label>
                                     <input
                                         type="number"
                                         min="0"
@@ -352,7 +352,7 @@ const PostBook: React.FC = () => {
                             <div className="border-t border-slate-200 pt-4 space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500">Book posting fee</span>
-                                    <span className="font-bold text-slate-900">${BOOK_POSTING_FEE.toFixed(2)}</span>
+                                    <span className="font-bold text-slate-900">{BOOK_POSTING_FEE.toLocaleString()} RWF</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-500">Platform commission</span>
@@ -360,7 +360,7 @@ const PostBook: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between text-base border-t border-slate-200 pt-3 mt-3">
                                     <span className="font-bold text-slate-900">Total</span>
-                                    <span className="font-extrabold text-primary text-lg">${BOOK_POSTING_FEE.toFixed(2)}</span>
+                                    <span className="font-extrabold text-primary text-lg">{BOOK_POSTING_FEE.toLocaleString()} RWF</span>
                                 </div>
                             </div>
                         </div>
@@ -391,7 +391,7 @@ const PostBook: React.FC = () => {
                                 ) : (
                                     <>
                                         <span className="material-symbols-outlined text-sm">lock</span>
-                                        Pay ${BOOK_POSTING_FEE.toFixed(2)} & Submit
+                                        Pay {BOOK_POSTING_FEE.toLocaleString()} RWF & Submit
                                     </>
                                 )}
                             </button>
@@ -421,7 +421,7 @@ const PostBook: React.FC = () => {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Amount</span>
-                                <span className="font-bold text-slate-900">${BOOK_POSTING_FEE.toFixed(2)}</span>
+                                <span className="font-bold text-slate-900">{BOOK_POSTING_FEE.toLocaleString()} RWF</span>
                             </div>
                         </div>
 

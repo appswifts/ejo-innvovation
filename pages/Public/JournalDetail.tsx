@@ -285,7 +285,7 @@ const JournalDetail: React.FC = () => {
                                 <div className="text-right">
                                   <span className="block text-[10px] font-black text-slate-400 uppercase tracking-tighter">Standalone Price</span>
                                   <span className="text-sm font-black text-slate-900">
-                                    {(article.price || 0) <= 0 ? 'Free' : `${article.currency || 'USD'} ${article.price?.toFixed(2)}`}
+                                    {(article.price || 0) <= 0 ? 'Free' : `${(article.price || 0).toLocaleString()} RWF`}
                                   </span>
                                 </div>
                                 {((article.price || 0) <= 0 && journal?.is_open_access) ? (
@@ -302,7 +302,7 @@ const JournalDetail: React.FC = () => {
                                           user_id: user.id,
                                           manuscript_id: article.id,
                                           amount: 0,
-                                          currency: article.currency || 'USD',
+                                          currency: article.currency || 'RWF',
                                           type: 'purchase',
                                           status: 'completed',
                                           description: `Free access: ${article.title}`,
@@ -397,7 +397,7 @@ const JournalDetail: React.FC = () => {
                       <p className="font-bold text-slate-900 text-sm">{subscriptionPackage.name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-black text-primary">{subscriptionPackage.currency} {subscriptionPackage.price.toFixed(2)}</p>
+                      <p className="text-lg font-black text-primary">{(subscriptionPackage.price || 0).toLocaleString()} RWF</p>
                       <p className="text-[10px] text-slate-400">/{subscriptionPackage.duration_months} Months</p>
                     </div>
                   </div>

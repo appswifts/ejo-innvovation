@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
         if (!existing) {
           const amount = payment.amount;
-          const currency = (payment.currency || 'USD').toUpperCase();
+          const currency = (payment.currency || 'RWF').toUpperCase();
 
           const transactionData: any = {
             user_id: userId,

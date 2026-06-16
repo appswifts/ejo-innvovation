@@ -101,7 +101,7 @@ const BooksPage: React.FC = () => {
           user_id: user.id,
           book_id: book.id,
           amount: 0,
-          currency: 'USD',
+          currency: 'RWF',
           type: 'purchase',
           status: 'completed',
           description: `Free access: ${book.title}`,
@@ -246,7 +246,7 @@ const BooksPage: React.FC = () => {
                       <div className="mt-auto flex items-center justify-between pt-5 border-t border-slate-50">
                         <div>
                           <span className="text-[10px] font-black text-slate-300 block uppercase tracking-[0.15em] mb-0.5">Price</span>
-                          <span className="text-xl font-black text-slate-900 tracking-tight">{book.price <= 0 ? 'Free' : `$${book.price}`}</span>
+                          <span className="text-xl font-black text-slate-900 tracking-tight">{book.price <= 0 ? 'Free' : `${book.price.toLocaleString()} RWF`}</span>
                         </div>
                         {isPurchased ? (
                           <button
@@ -336,8 +336,8 @@ const BooksPage: React.FC = () => {
                       {selectedBook.author_name || 'Academic Board'}
                     </p>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-slate-900">${selectedBook.price}</span>
-                      <span className="text-xs font-bold text-slate-400 uppercase">USD</span>
+                      <span className="text-3xl font-black text-slate-900">{selectedBook.price.toLocaleString()} RWF</span>
+                      <span className="text-xs font-bold text-slate-400 uppercase">RWF</span>
                     </div>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ const BooksPage: React.FC = () => {
                     className="flex-[2] px-6 py-3.5 bg-gradient-to-r from-primary to-primary/90 text-white font-bold text-sm rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-sm">shopping_cart</span>
-                    Purchase for ${selectedBook.price}
+                    Purchase for {selectedBook.price.toLocaleString()} RWF
                   </button>
                 )}
               </div>

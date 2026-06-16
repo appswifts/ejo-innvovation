@@ -19,12 +19,45 @@ const CheckoutPage: React.FC = () => {
     const type = searchParams.get('type');
     const id = searchParams.get('id');
     const packageId = searchParams.get('package_id');
+    const paymentStatus = searchParams.get('payment');
+
+    // Check for DPO/MoMo payment return
+    useEffect(() => {
+        if (paymentStatus === 'success') {
+            const pendingTx = localStorage.getItem('pending_dpo_transaction');
+            if (pendingTx) {
+                try {
+                    const txData = JSON.parse(pendingTx);
+                    // Verify the transaction with our backend
+                    supabase.functions.invoke('dpo-callback', {
+                        body: {
+                            trans_token: txData.transToken,
+                            status: 'completed'
+                        }
+                    }).then(() => {
+                        localStorage.removeItem('pending_dpo_transaction');
+                        setOrderSuccess(true);
+                    }).catch((err) => {
+                        console.error('DPO verification error:', err);
+                        localStorage.removeItem('pending_dpo_transaction');
+                        setOrderSuccess(true);
+                    });
+                } catch (e) {
+                    console.error('Error parsing pending DPO transaction:', e);
+                }
+            } else {
+                setOrderSuccess(true);
+            }
+        } else if (paymentStatus === 'cancelled') {
+            alert('Payment was cancelled. You can try again or choose a different payment method.');
+        }
+    }, [paymentStatus]);
 
     const [item, setItem] = useState<ItemDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar' | 'whop'>('manual');
+    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar' | 'whop' | 'dpo'>('manual');
     const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -52,7 +85,7 @@ const CheckoutPage: React.FC = () => {
                     .eq('id', id)
                     .single();
                 if (error) throw error;
-                setItem({ ...data, currency: 'USD' });
+                setItem({ ...data, currency: 'RWF' });
             } else if (type === 'manuscript') {
                 const { data: manuscript, error: manError } = await supabase
                     .from('manuscripts')
@@ -86,7 +119,7 @@ const CheckoutPage: React.FC = () => {
                 setItem({
                     title: `Article Access: ${data.title}`,
                     price: data.price || 0,
-                    currency: data.currency || 'USD',
+                    currency: data.currency || 'RWF',
                     description: 'Full text access (PDF download)',
                     whop_product_id: data.whop_product_id
                 });
@@ -160,6 +193,7 @@ const CheckoutPage: React.FC = () => {
     const isWhopEnabled = false;
     const isPolarEnabled = false;
     const isManualEnabled = true;
+    const isDpoEnabled = true;
 
     // Default to manual
     useEffect(() => {
@@ -225,6 +259,11 @@ const CheckoutPage: React.FC = () => {
                 setProcessing(false);
                 return;
             }
+            if (paymentMethod === 'dpo' && !isDpoEnabled) {
+                alert('Mobile Money payments are currently disabled. Please choose another payment method.');
+                setProcessing(false);
+                return;
+            }
 
             if (paymentMethod === 'whop') {
                 // Whop checkout via dynamic API checkout session
@@ -241,7 +280,7 @@ const CheckoutPage: React.FC = () => {
                         body: {
                             productId: whopProductId,
                             price: item?.price || 0,
-                            currency: item?.currency || 'usd',
+                            currency: item?.currency || 'rwf',
                             itemName: item?.title || '',
                             email: user.email || '',
                             userId: user.id,
@@ -311,6 +350,65 @@ const CheckoutPage: React.FC = () => {
                     setProcessing(false);
                     return;
                 }
+            }
+
+            if (paymentMethod === 'dpo') {
+                // DPO / Mobile Money Checkout
+                try {
+                    let resolvedPackageId: string | undefined = undefined;
+                    if (type === 'subscription') {
+                        const { data: journal } = await supabase
+                            .from('journals')
+                            .select('subscription_package_id')
+                            .eq('id', id)
+                            .single();
+                        resolvedPackageId = journal?.subscription_package_id || undefined;
+                    } else if (type === 'manuscript') {
+                        resolvedPackageId = packageId || undefined;
+                    }
+
+                    const { data: result, error: fnError } = await supabase.functions.invoke('dpo-checkout', {
+                        body: {
+                            amount: item?.price || 0,
+                            currency: item?.currency || 'RWF',
+                            ref_id: id || '',
+                            ref_type: type || 'general',
+                            user_id: user.id,
+                            customer_email: user.email || '',
+                            success_url: window.location.origin + '/checkout?payment=success',
+                            cancel_url: window.location.origin + '/checkout?payment=cancelled',
+                            metadata: {
+                                itemTitle: item?.title || '',
+                                ...(resolvedPackageId ? { packageId: resolvedPackageId } : {})
+                            }
+                        }
+                    });
+
+                    if (fnError || !result?.checkout_url) {
+                        console.error('DPO checkout error:', fnError || result);
+                        alert('Failed to create Mobile Money checkout. Please try again or use Bank Transfer.');
+                        setProcessing(false);
+                        return;
+                    }
+
+                    // Save transaction details for later verification
+                    if (result.transaction_id) {
+                        localStorage.setItem('pending_dpo_transaction', JSON.stringify({
+                            transactionId: result.transaction_id,
+                            transToken: result.trans_token,
+                            itemType: type,
+                            itemId: id,
+                            timestamp: Date.now()
+                        }));
+                    }
+
+                    window.location.href = result.checkout_url;
+                } catch (dpoError: any) {
+                    console.error('DPO checkout error:', dpoError);
+                    alert('Payment Error: ' + (dpoError.message || 'Failed to initialize Mobile Money checkout. Please try Bank Transfer.'));
+                    setProcessing(false);
+                }
+                return;
             }
 
             // Manual Bank Transfer Flow
@@ -392,8 +490,9 @@ const CheckoutPage: React.FC = () => {
                                 </div>
                                 <div className="h-px bg-slate-200 my-4"></div>
                                 <div className="space-y-1">
-                                    <p className="text-sm font-bold text-slate-900">Mtn momo code: *182*8*1*912672#</p>
+                                    <p className="text-sm font-bold text-slate-900">MTN MoMo: *182*8*1*912672#</p>
                                     <p className="text-sm font-bold text-slate-900">Names: Parfai</p>
+                                    <p className="text-sm font-bold text-slate-900">Airtel Money: *182*8*1*912672#</p>
                                 </div>
                             </div>
                         </div>
@@ -439,14 +538,14 @@ const CheckoutPage: React.FC = () => {
 
                         <div className="border-t border-slate-100 pt-6 mt-6 flex justify-between items-center">
                             <span className="text-slate-500 font-bold">Price</span>
-                            <span className="text-2xl font-black text-slate-900">{item && item.price <= 0 ? 'Free' : `${item?.currency} ${item?.price.toFixed(2)}`}</span>
+                            <span className="text-2xl font-black text-slate-900">{item && item.price <= 0 ? 'Free' : `${(item?.price || 0).toLocaleString()} RWF`}</span>
                         </div>
                     </div>
 
                     <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                         <span className="material-symbols-outlined text-amber-600">info</span>
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                            <strong>Note:</strong> We currently only support manual payments (Bank Transfer and MTN Mobile Money). Your content will be activated once payment is verified.{' '}
+                            <strong>Note:</strong> You can pay via Mobile Money (MTN MoMo, Airtel Money) or Bank Transfer. Your content will be activated once payment is verified.{' '}
                             After paying, please call or text us on WhatsApp at <strong>+250 732 752 616</strong> so we can approve your payment as fast as possible.
                         </p>
                     </div>
@@ -455,15 +554,39 @@ const CheckoutPage: React.FC = () => {
                     <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mt-8">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 underline decoration-primary decoration-4 underline-offset-8">Payment Method</p>
                         <div className="space-y-4">
-                            <div className="p-4 rounded-xl border-2 border-primary bg-primary/5 flex items-center justify-between">
+                            {/* DPO / Mobile Money */}
+                            <button
+                                onClick={() => setPaymentMethod('dpo')}
+                                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${paymentMethod === 'dpo' ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/30'}`}
+                            >
                                 <div className="flex items-center gap-3">
-                                    <div className="w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'dpo' ? 'border-primary' : 'border-slate-300'}`}>
+                                        {paymentMethod === 'dpo' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
                                     </div>
-                                    <span className="font-bold text-slate-900">Manual Payment (Bank / MTN Momo)</span>
+                                    <div className="text-left">
+                                        <span className="font-bold text-slate-900 block">Mobile Money (MTN MoMo / Airtel)</span>
+                                        <span className="text-xs text-slate-500">Pay instantly with your mobile wallet</span>
+                                    </div>
+                                </div>
+                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Online</span>
+                            </button>
+
+                            {/* Manual Payment */}
+                            <button
+                                onClick={() => setPaymentMethod('manual')}
+                                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${paymentMethod === 'manual' ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/30'}`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'manual' ? 'border-primary' : 'border-slate-300'}`}>
+                                        {paymentMethod === 'manual' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
+                                    </div>
+                                    <div className="text-left">
+                                        <span className="font-bold text-slate-900 block">Bank Transfer / MTN Momo Manual</span>
+                                        <span className="text-xs text-slate-500">Send payment manually and we verify it</span>
+                                    </div>
                                 </div>
                                 <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Offline</span>
-                            </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -475,16 +598,16 @@ const CheckoutPage: React.FC = () => {
                         <div className="space-y-4 mb-10 text-slate-400 font-medium">
                             <div className="flex justify-between items-center">
                                 <span>Subtotal</span>
-                                <span className="text-white">{item?.currency} {item?.price.toFixed(2)}</span>
+                                <span className="text-white">{(item?.price || 0).toLocaleString()} RWF</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span>Tax (0%)</span>
-                                <span className="text-white">$0.00</span>
+                                <span className="text-white">0 RWF</span>
                             </div>
                             <div className="h-px bg-slate-800 my-2"></div>
                             <div className="flex justify-between items-center text-white text-lg font-bold">
                                 <span>Total to Pay</span>
-                                <span className="text-2xl font-black">{item?.currency} {item?.price.toFixed(2)}</span>
+                                <span className="text-2xl font-black">{(item?.price || 0).toLocaleString()} RWF</span>
                             </div>
                         </div>
 
