@@ -292,31 +292,12 @@ const JournalDetail: React.FC = () => {
                                   <button
                                     onClick={async (e) => {
                                       e.stopPropagation();
-                                      if (!user) {
-                                        const checkoutUrl = encodeURIComponent(`/checkout?type=article&id=${article.id}`);
-                                        navigate(`/login?redirect=${checkoutUrl}`);
-                                        return;
-                                      }
-                                      try {
-                                        const { error } = await supabase.from('transactions').insert({
-                                          user_id: user.id,
-                                          manuscript_id: article.id,
-                                          amount: 0,
-                                          currency: article.currency || 'RWF',
-                                          type: 'purchase',
-                                          status: 'completed',
-                                          description: `Free access: ${article.title}`,
-                                          payment_gateway: 'free',
-                                        });
-                                        if (error) throw error;
-                                        setPurchasedArticles(prev => new Set([...prev, article.id]));
-                                      } catch (err: any) {
-                                        alert('Failed: ' + err.message);
-                                      }
+                                      // Open access articles are freely accessible — no login needed
+                                      navigate(`/articles/${article.id}`);
                                     }}
                                     className="flex items-center gap-1 text-xs font-bold bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all active:scale-95 shadow-md shadow-green-500/20"
                                   >
-                                    <span className="material-symbols-outlined text-sm">lock_open</span> Get Free
+                                    <span className="material-symbols-outlined text-sm">lock_open</span> Read Free
                                   </button>
                                 ) : (article.price || 0) > 0 ? (
                                   <button

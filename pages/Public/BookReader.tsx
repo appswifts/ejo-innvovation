@@ -180,14 +180,21 @@ const BookReader: React.FC = () => {
         try {
             let path = book.pdf_url;
             // Extract relative path if it's a full Supabase URL
+            // Handles: public URLs, signed URLs, URLs with query params
             if (path.includes('supabase.co')) {
-                const match = path.match(/\/library\/(.+)$/);
+                const match = path.match(/\/library\/([^?#]+)/);
                 if (match) path = match[1];
+            }
+
+            // If the original URL looks like a direct public URL, try it first
+            if (book.pdf_url.includes('/object/public/')) {
+                window.open(book.pdf_url, '_blank');
+                return;
             }
 
             const { data, error } = await supabase.storage
                 .from('library')
-                .createSignedUrl(path, 60);
+                .createSignedUrl(path, 300); // 5 minutes
 
             if (error) throw error;
             window.open(data.signedUrl, '_blank');
@@ -234,15 +241,13 @@ const BookReader: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {isEditor && (
-                        <button
-                            onClick={handleDownload}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
-                            title="Download PDF"
-                        >
-                            <span className="material-symbols-outlined">download</span>
-                        </button>
-                    )}
+                    <button
+                        onClick={handleDownload}
+                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                        title="Download PDF"
+                    >
+                        <span className="material-symbols-outlined">download</span>
+                    </button>
                     <button
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
                         onClick={() => {

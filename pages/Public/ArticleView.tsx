@@ -187,19 +187,21 @@ const ArticleView: React.FC = () => {
 
     try {
       let path = article.file_url;
+      // Extract relative path from Supabase storage URLs
+      // Handles public URLs, signed URLs, and URLs with query parameters
       if (path.includes('supabase.co')) {
-        const match = path.match(/\/manuscripts\/(.+)$/);
+        const match = path.match(/\/manuscripts\/([^?#]+)/);
         if (match) path = match[1];
       }
 
-      // For open access journals, try to use a public URL first to avoid auth issues
+      // For open access journals, try direct/public access first
       if (article.journal?.is_open_access) {
-        // If it's a direct public URL, use it
-        if (article.file_url.startsWith('http')) {
+        // If it's already a public URL, open directly
+        if (article.file_url.includes('/object/public/')) {
           window.open(article.file_url, '_blank');
           return;
         }
-        // Otherwise try to get public URL
+        // Try to build a public URL from the extracted path
         const { data } = supabase.storage.from('manuscripts').getPublicUrl(path);
         if (data?.publicUrl) {
           window.open(data.publicUrl, '_blank');
@@ -207,17 +209,22 @@ const ArticleView: React.FC = () => {
         }
       }
 
-      // For paid content, use signed URL (requires auth)
+      // For paid content or when public URL fails, use signed URL
       const { data, error } = await supabase.storage
         .from('manuscripts')
-        .createSignedUrl(path, 60);
+        .createSignedUrl(path, 300); // 5 minutes
 
       if (error) throw error;
 
       window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error("Download error", error);
-      alert("Could not download file.");
+      // Final fallback: try the original URL directly
+      if (article.file_url.startsWith('http')) {
+        window.open(article.file_url, '_blank');
+      } else {
+        alert("Could not download file. Please try again later.");
+      }
     }
   };
 
