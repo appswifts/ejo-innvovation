@@ -80,7 +80,68 @@ USING (
   )
 );
 
--- 8. Add helpful function for checking user role
+-- 8. Create storage buckets for manuscripts and library if they don't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('manuscripts', 'manuscripts', true)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('library', 'library', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policies for manuscripts bucket (public read for open access, authenticated for upload)
+DROP POLICY IF EXISTS "Public read manuscripts" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload manuscripts" ON storage.objects;
+DROP POLICY IF EXISTS "Owner update manuscripts" ON storage.objects;
+DROP POLICY IF EXISTS "Owner delete manuscripts" ON storage.objects;
+
+CREATE POLICY "Public read manuscripts"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'manuscripts');
+
+CREATE POLICY "Authenticated upload manuscripts"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'manuscripts');
+
+CREATE POLICY "Owner update manuscripts"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'manuscripts' AND auth.uid() = owner);
+
+CREATE POLICY "Owner delete manuscripts"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'manuscripts' AND auth.uid() = owner);
+
+-- Policies for library bucket (public read for purchased books, authenticated for upload)
+DROP POLICY IF EXISTS "Public read library" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated upload library" ON storage.objects;
+DROP POLICY IF EXISTS "Owner update library" ON storage.objects;
+DROP POLICY IF EXISTS "Owner delete library" ON storage.objects;
+
+CREATE POLICY "Public read library"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'library');
+
+CREATE POLICY "Authenticated upload library"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'library');
+
+CREATE POLICY "Owner update library"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'library' AND auth.uid() = owner);
+
+CREATE POLICY "Owner delete library"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (bucket_id = 'library' AND auth.uid() = owner);
+
+-- 9. Add helpful function for checking user role
 CREATE OR REPLACE FUNCTION public.get_user_role_slug(p_user_id UUID)
 RETURNS TEXT AS $$
 DECLARE

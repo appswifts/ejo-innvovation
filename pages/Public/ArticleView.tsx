@@ -185,45 +185,87 @@ const ArticleView: React.FC = () => {
       return;
     }
 
+    console.log("Download: original file_url =", article.file_url);
+
     try {
       let path = article.file_url;
+
       // Extract relative path from Supabase storage URLs
-      // Handles public URLs, signed URLs, and URLs with query parameters
+      // Example URL: https://xxx.supabase.co/storage/v1/object/public/manuscripts/folder/file.pdf
+      // Or signed: https://xxx.supabase.co/storage/v1/object/sign/manuscripts/folder/file.pdf?token=...
       if (path.includes('supabase.co')) {
+        // Try to match /manuscripts/ followed by path, stopping at ? or #
         const match = path.match(/\/manuscripts\/([^?#]+)/);
-        if (match) path = match[1];
+        if (match) {
+          path = match[1];
+          console.log("Download: extracted storage path =", path);
+        } else {
+          console.warn("Download: could not extract path from URL:", path);
+        }
       }
 
       // For open access journals, try direct/public access first
       if (article.journal?.is_open_access) {
-        // If it's already a public URL, open directly
+        // If it's already a public URL, use it directly
         if (article.file_url.includes('/object/public/')) {
-          window.open(article.file_url, '_blank');
+          console.log("Download: using direct public URL");
+          const link = document.createElement('a');
+          link.href = article.file_url;
+          link.target = '_blank';
+          link.download = `${article.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
           return;
         }
         // Try to build a public URL from the extracted path
         const { data } = supabase.storage.from('manuscripts').getPublicUrl(path);
         if (data?.publicUrl) {
-          window.open(data.publicUrl, '_blank');
+          console.log("Download: using generated public URL =", data.publicUrl);
+          const link = document.createElement('a');
+          link.href = data.publicUrl;
+          link.target = '_blank';
+          link.download = `${article.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
           return;
         }
       }
 
       // For paid content or when public URL fails, use signed URL
+      console.log("Download: creating signed URL for path =", path);
       const { data, error } = await supabase.storage
         .from('manuscripts')
         .createSignedUrl(path, 300); // 5 minutes
 
-      if (error) throw error;
+      if (error) {
+        console.error("Download: signed URL error:", error);
+        throw error;
+      }
 
-      window.open(data.signedUrl, '_blank');
-    } catch (error) {
-      console.error("Download error", error);
+      console.log("Download: signed URL created =", data.signedUrl);
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.target = '_blank';
+      link.download = `${article.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error: any) {
+      console.error("Download: fatal error", error);
       // Final fallback: try the original URL directly
       if (article.file_url.startsWith('http')) {
-        window.open(article.file_url, '_blank');
+        console.log("Download: falling back to original URL");
+        const link = document.createElement('a');
+        link.href = article.file_url;
+        link.target = '_blank';
+        link.download = `${article.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       } else {
-        alert("Could not download file. Please try again later.");
+        alert("Could not download file. Please try again later. Error: " + (error.message || 'Unknown'));
       }
     }
   };

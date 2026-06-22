@@ -175,7 +175,12 @@ const BookReader: React.FC = () => {
     }
 
     const handleDownload = async () => {
-        if (!book?.pdf_url) return;
+        if (!book?.pdf_url) {
+            alert('No PDF available for download.');
+            return;
+        }
+
+        console.log("Book Download: original pdf_url =", book.pdf_url);
 
         try {
             let path = book.pdf_url;
@@ -183,12 +188,24 @@ const BookReader: React.FC = () => {
             // Handles: public URLs, signed URLs, URLs with query params
             if (path.includes('supabase.co')) {
                 const match = path.match(/\/library\/([^?#]+)/);
-                if (match) path = match[1];
+                if (match) {
+                    path = match[1];
+                    console.log("Book Download: extracted storage path =", path);
+                } else {
+                    console.warn("Book Download: could not extract path from URL:", path);
+                }
             }
 
-            // If the original URL looks like a direct public URL, try it first
+            // If the original URL looks like a direct public URL, use it
             if (book.pdf_url.includes('/object/public/')) {
-                window.open(book.pdf_url, '_blank');
+                console.log("Book Download: using direct public URL");
+                const link = document.createElement('a');
+                link.href = book.pdf_url;
+                link.target = '_blank';
+                link.download = `${book.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 return;
             }
 
@@ -196,12 +213,30 @@ const BookReader: React.FC = () => {
                 .from('library')
                 .createSignedUrl(path, 300); // 5 minutes
 
-            if (error) throw error;
-            window.open(data.signedUrl, '_blank');
-        } catch (err) {
-            console.error('Download error:', err);
+            if (error) {
+                console.error("Book Download: signed URL error:", error);
+                throw error;
+            }
+
+            console.log("Book Download: signed URL created =", data.signedUrl);
+            const link = document.createElement('a');
+            link.href = data.signedUrl;
+            link.target = '_blank';
+            link.download = `${book.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err: any) {
+            console.error('Book Download: fatal error:', err);
             // Fallback to direct link if signed URL fails
-            window.open(book.pdf_url, '_blank');
+            console.log("Book Download: falling back to original URL");
+            const link = document.createElement('a');
+            link.href = book.pdf_url;
+            link.target = '_blank';
+            link.download = `${book.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
 

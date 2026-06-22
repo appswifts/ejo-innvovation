@@ -25,8 +25,8 @@ export const createDpoCheckout = async (
             customer_email: email,
             customer_name: metadata?.customerName,
             customer_phone: metadata?.customerPhone,
-            success_url: `${window.location.origin}/checkout?payment=success`,
-            cancel_url: `${window.location.origin}/checkout?payment=cancelled`,
+            success_url: `${window.location.origin}/checkout?type=${refType}&id=${refId}&payment=success`,
+            cancel_url: `${window.location.origin}/checkout?type=${refType}&id=${refId}&payment=cancelled`,
             metadata
         },
     });

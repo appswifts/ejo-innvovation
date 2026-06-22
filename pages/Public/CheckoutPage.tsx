@@ -108,6 +108,15 @@ const CheckoutPage: React.FC = () => {
                         description: `Package: ${pkg.name}`,
                         whop_product_id: pkg.whop_product_id || manuscript.whop_product_id
                     });
+                } else {
+                    // Fallback if no package is specified
+                    setItem({
+                        title: `APC Fee: ${manuscript.title}`,
+                        price: 0,
+                        currency: 'RWF',
+                        description: 'Manuscript processing fee',
+                        whop_product_id: manuscript.whop_product_id
+                    });
                 }
             } else if (type === 'article') {
                 const { data, error } = await supabase
@@ -375,8 +384,8 @@ const CheckoutPage: React.FC = () => {
                             ref_type: type || 'general',
                             user_id: user.id,
                             customer_email: user.email || '',
-                            success_url: window.location.origin + '/checkout?payment=success',
-                            cancel_url: window.location.origin + '/checkout?payment=cancelled',
+                            success_url: window.location.origin + `/checkout?type=${type}&id=${id}${packageId ? `&package_id=${packageId}` : ''}&payment=success`,
+                            cancel_url: window.location.origin + `/checkout?type=${type}&id=${id}${packageId ? `&package_id=${packageId}` : ''}&payment=cancelled`,
                             metadata: {
                                 itemTitle: item?.title || '',
                                 ...(resolvedPackageId ? { packageId: resolvedPackageId } : {})
@@ -384,31 +393,35 @@ const CheckoutPage: React.FC = () => {
                         }
                     });
 
-                    if (fnError || !result?.checkout_url) {
-                        console.error('DPO checkout error:', fnError || result);
-                        alert('Failed to create Mobile Money checkout. Please try again or use Bank Transfer.');
-                        setProcessing(false);
-                        return;
+                    // If DPO function is not deployed or failed, fallback to manual payment
+                    if (fnError) {
+                        console.warn('DPO checkout function error (likely not deployed):', fnError);
+                        alert('Mobile Money gateway is temporarily unavailable. Falling back to Manual Payment (Bank Transfer / MTN Momo). Please complete your order and follow the payment instructions.');
+                        // Continue to manual payment flow below instead of returning
+                    } else if (!result?.checkout_url) {
+                        console.error('DPO checkout returned no URL:', result);
+                        alert('Mobile Money checkout could not be created. Falling back to Manual Payment.');
+                        // Continue to manual payment flow below
+                    } else {
+                        // DPO Success — save pending transaction and redirect
+                        if (result.transaction_id) {
+                            localStorage.setItem('pending_dpo_transaction', JSON.stringify({
+                                transactionId: result.transaction_id,
+                                transToken: result.trans_token,
+                                itemType: type,
+                                itemId: id,
+                                timestamp: Date.now()
+                            }));
+                        }
+                        window.location.href = result.checkout_url;
+                        return; // Only return on actual success
                     }
-
-                    // Save transaction details for later verification
-                    if (result.transaction_id) {
-                        localStorage.setItem('pending_dpo_transaction', JSON.stringify({
-                            transactionId: result.transaction_id,
-                            transToken: result.trans_token,
-                            itemType: type,
-                            itemId: id,
-                            timestamp: Date.now()
-                        }));
-                    }
-
-                    window.location.href = result.checkout_url;
                 } catch (dpoError: any) {
-                    console.error('DPO checkout error:', dpoError);
-                    alert('Payment Error: ' + (dpoError.message || 'Failed to initialize Mobile Money checkout. Please try Bank Transfer.'));
-                    setProcessing(false);
+                    console.error('DPO checkout exception:', dpoError);
+                    alert('Mobile Money gateway error: ' + (dpoError.message || 'Service unavailable') + '. Falling back to Manual Payment.');
+                    // Continue to manual payment flow below
                 }
-                return;
+                // If we reach here, DPO failed but we fall through to manual payment
             }
 
             // Manual Bank Transfer Flow
