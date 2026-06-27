@@ -95,32 +95,7 @@ const BookReader: React.FC = () => {
             if (isUserEditor || transaction || bookData.seller_id === user.id) {
                 setHasAccess(true);
             } else {
-                // 3. Whop Direct Check Fallback
-                try {
-                    const { data: whopCheck, error: whopError } = await supabase.functions.invoke('whop-check', {
-                        body: { email: user.email, refId: id }
-                    });
-
-                    if (!whopError && whopCheck?.hasAccess) {
-                        setHasAccess(true);
-                        // Pro-actively sync to local transactions
-                        await supabase.from('transactions').insert({
-                            user_id: user.id,
-                            amount: bookData.price || 0,
-                            currency: 'RWF',
-                            type: 'purchase',
-                            status: 'completed',
-                            payment_gateway: 'whop',
-                            description: `Direct check recovery: ${bookData.title}`,
-                            book_id: id
-                        });
-                    } else {
-                        setHasAccess(false);
-                    }
-                } catch (err) {
-                    console.error("Whop fallback check failed", err);
-                    setHasAccess(false);
-                }
+                setHasAccess(false);
             }
 
         } catch (err) {

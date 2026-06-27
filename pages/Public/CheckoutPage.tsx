@@ -51,7 +51,7 @@ const CheckoutPage: React.FC = () => {
             if (type === 'book') {
                 const { data, error } = await supabase
                     .from('books')
-                    .select('title, price, whop_product_id')
+                    .select('title, price')
                     .eq('id', id)
                     .single();
                 if (error) throw error;
@@ -59,7 +59,7 @@ const CheckoutPage: React.FC = () => {
             } else if (type === 'manuscript') {
                 const { data: manuscript, error: manError } = await supabase
                     .from('manuscripts')
-                    .select('title, whop_product_id')
+                    .select('title')
                     .eq('id', id)
                     .single();
                 if (manError) throw manError;
@@ -67,7 +67,7 @@ const CheckoutPage: React.FC = () => {
                 if (packageId) {
                     const { data: pkg, error: pkgError } = await supabase
                         .from('publication_packages')
-                        .select('name, price, currency, whop_product_id')
+                        .select('name, price, currency')
                         .eq('id', packageId)
                         .single();
                     if (pkgError) throw pkgError;
@@ -75,23 +75,20 @@ const CheckoutPage: React.FC = () => {
                         title: `APC Fee: ${manuscript.title}`,
                         price: parseFloat(pkg.price),
                         currency: pkg.currency,
-                        description: `Package: ${pkg.name}`,
-                        whop_product_id: pkg.whop_product_id || manuscript.whop_product_id
+                        description: `Package: ${pkg.name}`
                     });
                 } else {
-                    // Fallback if no package is specified
                     setItem({
                         title: `APC Fee: ${manuscript.title}`,
                         price: 0,
                         currency: 'RWF',
-                        description: 'Manuscript processing fee',
-                        whop_product_id: manuscript.whop_product_id
+                        description: 'Manuscript processing fee'
                     });
                 }
             } else if (type === 'article') {
                 const { data, error } = await supabase
                     .from('manuscripts')
-                    .select('title, price, currency, whop_product_id')
+                    .select('title, price, currency')
                     .eq('id', id)
                     .single();
                 if (error) throw error;
@@ -99,8 +96,7 @@ const CheckoutPage: React.FC = () => {
                     title: `Article Access: ${data.title}`,
                     price: data.price || 0,
                     currency: data.currency || 'RWF',
-                    description: 'Full text access (PDF download)',
-                    whop_product_id: data.whop_product_id
+                    description: 'Full text access (PDF download)'
                 });
             } else if (type === 'subscription') {
                 const { data: journal, error: journalError } = await supabase
@@ -114,7 +110,7 @@ const CheckoutPage: React.FC = () => {
 
                 const { data: pkg, error: pkgError } = await supabase
                     .from('publication_packages')
-                    .select('name, price, currency, whop_product_id')
+                    .select('name, price, currency')
                     .eq('id', journal.subscription_package_id)
                     .single();
                 if (pkgError) throw pkgError;
@@ -123,8 +119,7 @@ const CheckoutPage: React.FC = () => {
                     title: `Subscription: ${journal.title}`,
                     price: parseFloat(pkg.price),
                     currency: pkg.currency,
-                    description: `Package: ${pkg.name} (Access to all articles)`,
-                    whop_product_id: pkg.whop_product_id
+                    description: `Package: ${pkg.name} (Access to all articles)`
                 });
             }
         } catch (error) {
@@ -132,18 +127,6 @@ const CheckoutPage: React.FC = () => {
             navigate('/');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchPaymentSettings = async () => {
-        const { data } = await supabase
-            .from('site_settings')
-            .select('key, value')
-            .eq('category', 'payment');
-        if (data) {
-            const map: Record<string, string> = {};
-            data.forEach((s: { key: string; value: string }) => { map[s.key] = s.value; });
-            setPaymentSettings(map);
         }
     };
 
