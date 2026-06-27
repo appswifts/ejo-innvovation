@@ -17,6 +17,7 @@ const PostBook: React.FC = () => {
     const [uploadingPdf, setUploadingPdf] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
     const [createdBookId, setCreatedBookId] = useState<string | null>(null);
+    const [phoneNumber, setPhoneNumber] = useState('');
 
     const [formData, setFormData] = useState({
         title: '',
@@ -78,15 +79,11 @@ const PostBook: React.FC = () => {
         }
     };
 
-    const handleMockPayment = async () => {
+    const handlePayment = async () => {
         if (!user) return;
         try {
             setProcessingPayment(true);
 
-            // Simulate payment processing delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Insert book into database
             const { data, error } = await supabase.from('books').insert({
                 title: formData.title,
                 author_name: formData.author_name,
@@ -101,16 +98,32 @@ const PostBook: React.FC = () => {
 
             if (error) throw error;
 
-            // Record mock transaction
-            await supabase.from('transactions').insert({
-                user_id: user.id,
-                amount: BOOK_POSTING_FEE,
-                currency: 'RWF',
-                type: 'book_purchase',
-                status: 'completed',
-                payment_method: 'mock_payment',
-                description: `Book posting fee for "${formData.title}"`,
+            const { data: kitovuResult, error: kitovuError } = await supabase.functions.invoke('kitovu-checkout', {
+                body: {
+                    amount: BOOK_POSTING_FEE,
+                    currency: 'RWF',
+                    phoneNumber: phoneNumber,
+                    reference: `book_${data.id}_${Date.now()}`,
+                    description: `Book posting fee for "${formData.title}"`,
+                },
             });
+
+            if (kitovuError || kitovuResult?.fallback) {
+                await supabase.from('transactions').insert({
+                    user_id: user.id,
+                    amount: BOOK_POSTING_FEE,
+                    currency: 'RWF',
+                    type: 'book_purchase',
+                    status: 'pending',
+                    description: `Book posting fee for "${formData.title}"`,
+                    payment_gateway: kitovuError ? 'manual' : 'kitovu',
+                    book_id: data.id,
+                });
+
+                if (kitovuError) {
+                    alert('Mobile money is temporarily unavailable. Your book has been saved. Please contact finance to complete payment.');
+                }
+            }
 
             setCreatedBookId(data?.id || null);
             setStep('complete');
@@ -125,7 +138,6 @@ const PostBook: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-50 p-6 md:p-10">
             <div className="max-w-3xl mx-auto">
-                {/* Header */}
                 <div className="mb-8">
                     <button onClick={() => navigate('/dashboard/books')} className="flex items-center gap-1 text-sm text-slate-500 hover:text-primary mb-4 transition-colors">
                         <span className="material-symbols-outlined text-sm">arrow_back</span> Back to My Books
@@ -134,7 +146,6 @@ const PostBook: React.FC = () => {
                     <p className="text-slate-500 mt-1">Submit your book for publication on Nkiza Center for Research.</p>
                 </div>
 
-                {/* Progress Steps */}
                 <div className="flex items-center gap-0 mb-10">
                     {[
                         { key: 'details', label: 'Book Details', icon: 'edit_note' },
@@ -162,7 +173,6 @@ const PostBook: React.FC = () => {
                     })}
                 </div>
 
-                {/* Step 1: Book Details */}
                 {step === 'details' && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in">
                         <h2 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2">
@@ -242,7 +252,6 @@ const PostBook: React.FC = () => {
                     </div>
                 )}
 
-                {/* Step 2: Upload Files */}
                 {step === 'files' && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in">
                         <h2 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2">
@@ -250,7 +259,6 @@ const PostBook: React.FC = () => {
                             Upload Files
                         </h2>
                         <div className="space-y-8">
-                            {/* Cover Image */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Cover Image <span className="text-red-500">*</span></label>
                                 {formData.cover_url ? (
@@ -273,7 +281,6 @@ const PostBook: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* PDF File */}
                             <div>
                                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Book PDF <span className="text-red-500">*</span></label>
                                 {formData.pdf_url ? (
@@ -313,7 +320,6 @@ const PostBook: React.FC = () => {
                     </div>
                 )}
 
-                {/* Step 3: Payment */}
                 {step === 'payment' && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 animate-in">
                         <h2 className="text-xl font-extrabold text-slate-900 mb-6 flex items-center gap-2">
@@ -321,7 +327,6 @@ const PostBook: React.FC = () => {
                             Payment
                         </h2>
 
-                        {/* Order Summary */}
                         <div className="bg-slate-50 rounded-xl p-6 mb-6 border border-slate-200">
                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Order Summary</h3>
                             <div className="flex items-center gap-4 mb-4">
@@ -353,13 +358,20 @@ const PostBook: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Mock Payment Notice */}
-                        <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 mb-6 flex items-start gap-3">
-                            <span className="material-symbols-outlined text-amber-600 mt-0.5">info</span>
-                            <div>
-                                <p className="text-sm font-bold text-amber-800">Demo Payment Mode</p>
-                                <p className="text-xs text-amber-600 mt-1">Payment processing is in demo mode. No real charges will be made. Your book will be submitted for review upon clicking "Pay & Submit".</p>
-                            </div>
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-slate-700 mb-2">
+                                Mobile Money Number <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="tel"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                placeholder="e.g. 0788123456"
+                                className="w-full h-12 px-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
+                            />
+                            <p className="text-xs text-slate-500 mt-2">
+                                You will receive an MTN MoMo / Airtel Money payment request on your phone.
+                            </p>
                         </div>
 
                         <div className="flex justify-between">
@@ -367,8 +379,8 @@ const PostBook: React.FC = () => {
                                 <span className="material-symbols-outlined text-sm">arrow_back</span> Back
                             </button>
                             <button
-                                onClick={handleMockPayment}
-                                disabled={processingPayment}
+                                onClick={handlePayment}
+                                disabled={processingPayment || !phoneNumber}
                                 className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                             >
                                 {processingPayment ? (
@@ -387,7 +399,6 @@ const PostBook: React.FC = () => {
                     </div>
                 )}
 
-                {/* Step 4: Complete */}
                 {step === 'complete' && (
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10 text-center animate-in">
                         <div className="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-6">
@@ -395,7 +406,7 @@ const PostBook: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Book Submitted Successfully!</h2>
                         <p className="text-slate-500 max-w-md mx-auto mb-8">
-                            Your book "{formData.title}" has been submitted and is now pending review by our editorial team. You'll be notified once it's approved.
+                            Your book "{formData.title}" has been submitted and is now pending review. A payment request has been sent to your phone.
                         </p>
 
                         <div className="bg-slate-50 rounded-xl p-4 max-w-sm mx-auto mb-8 text-left space-y-2 border border-slate-200">
@@ -405,7 +416,7 @@ const PostBook: React.FC = () => {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Payment</span>
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase">Paid</span>
+                                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase">Pending</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Amount</span>

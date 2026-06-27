@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { createKitovuCheckout } from '../../lib/kitovu';
 
 interface ItemDetails {
     title: string;
@@ -9,6 +10,8 @@ interface ItemDetails {
     currency: string;
     description?: string;
 }
+
+type PaymentMethod = 'kitovu' | 'manual';
 
 const CheckoutPage: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -30,6 +33,9 @@ const CheckoutPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('kitovu');
+    const [kitovuFailed, setKitovuFailed] = useState(false);
 
     useEffect(() => {
         if (!loading && !user) {
@@ -130,13 +136,19 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
+    const generateReference = () => {
+        const prefix = type === 'subscription' ? 'subscription' :
+            type === 'manuscript' ? 'apc' :
+                type === 'book' ? 'book' : 'article';
+        return `${prefix}_${id}_${Date.now()}`;
+    };
+
     const handleConfirmOrder = async () => {
         if (!user || !item) return;
 
         try {
             setProcessing(true);
 
-            // Free item — auto-complete without payment
             if (item.price <= 0) {
                 const transactionData: any = {
                     user_id: user.id,
@@ -172,7 +184,65 @@ const CheckoutPage: React.FC = () => {
                 return;
             }
 
-            // Manual Bank Transfer Flow
+            if (paymentMethod === 'kitovu' && !kitovuFailed) {
+                const reference = generateReference();
+
+                const result = await createKitovuCheckout({
+                    amount: item.price,
+                    currency: item.currency,
+                    phoneNumber: phoneNumber,
+                    reference,
+                    description: `Payment for ${item.title}`,
+                });
+
+                const transactionData: any = {
+                    user_id: user.id,
+                    amount: item.price,
+                    currency: item.currency,
+                    type: type === 'subscription' ? 'journal_subscription' :
+                        (type === 'book' || type === 'article') ? 'purchase' : 'apc_payment',
+                    status: result.fallback ? 'pending' : 'pending',
+                    description: result.fallback
+                        ? `Order for ${item.title}`
+                        : `KitovuPay:${reference}`,
+                    payment_gateway: result.fallback ? 'manual' : 'kitovu'
+                };
+
+                if (type === 'book') transactionData.book_id = id;
+                if (type === 'manuscript') {
+                    transactionData.manuscript_id = id;
+                    transactionData.package_id = packageId;
+                }
+                if (type === 'article') {
+                    transactionData.manuscript_id = id;
+                }
+                if (type === 'subscription') {
+                    const { data: journal } = await supabase
+                        .from('journals')
+                        .select('subscription_package_id')
+                        .eq('id', id)
+                        .single();
+                    transactionData.package_id = journal?.subscription_package_id;
+                }
+
+                const { error } = await supabase
+                    .from('transactions')
+                    .insert([transactionData]);
+
+                if (error) throw error;
+
+                if (result.fallback) {
+                    setKitovuFailed(true);
+                    setPaymentMethod('manual');
+                    setProcessing(false);
+                    return;
+                }
+
+                setOrderSuccess(true);
+                setProcessing(false);
+                return;
+            }
+
             const transactionData: any = {
                 user_id: user.id,
                 amount: item.price,
@@ -193,7 +263,6 @@ const CheckoutPage: React.FC = () => {
                 transactionData.manuscript_id = id;
             }
             if (type === 'subscription') {
-                // For subscriptions, we need the package_id linked to the journal
                 const { data: journal } = await supabase
                     .from('journals')
                     .select('subscription_package_id')
@@ -227,35 +296,50 @@ const CheckoutPage: React.FC = () => {
 
     if (orderSuccess) {
         const isFree = item && item.price <= 0;
+        const viaKitovu = !isFree && paymentMethod === 'kitovu' && !kitovuFailed;
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
                 <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-10 text-center animate-in zoom-in duration-300">
                     <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-4xl font-bold">check_circle</span>
                     </div>
-                    <h2 className="text-2xl font-black text-slate-900 mb-2">{isFree ? 'Access Granted!' : 'Order Received!'}</h2>
+                    <h2 className="text-2xl font-black text-slate-900 mb-2">
+                        {isFree ? 'Access Granted!' : viaKitovu ? 'Payment Sent!' : 'Order Received!'}
+                    </h2>
                     <p className="text-slate-500 mb-8">
                         {isFree
                             ? 'This item is free. You now have full access — enjoy!'
-                            : <>Your order is now <strong>PENDING</strong>. Please proceed with the payment via Bank Transfer and send the proof to our finance team.</>}
+                            : viaKitovu
+                                ? <>A payment request has been sent to <strong className="text-slate-900">{phoneNumber}</strong> via Mobile Money. Please check your phone and enter your PIN to complete the payment.</>
+                                : <>Your order is now <strong>PENDING</strong>. Please proceed with the payment via Bank Transfer and send the proof to our finance team.</>}
                     </p>
 
                     {!isFree && (
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-left mb-8">
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">Payment Instructions</p>
-                            <div className="space-y-4">
-                                <div className="space-y-1">
-                                    <p className="text-sm font-bold text-slate-900">Account number: 100166537511</p>
-                                    <p className="text-sm font-bold text-slate-900">Bank name: Bank of Kigali</p>
-                                    <p className="text-sm font-bold text-slate-900">Account name: Nkiza ltd</p>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-4">
+                                {viaKitovu ? 'Transaction Details' : 'Payment Instructions'}
+                            </p>
+                            {viaKitovu ? (
+                                <div className="space-y-2">
+                                    <p className="text-sm text-slate-700">Amount: <strong className="text-slate-900">{(item?.price || 0).toLocaleString()} RWF</strong></p>
+                                    <p className="text-sm text-slate-700">Mobile Money: <strong className="text-slate-900">{phoneNumber}</strong></p>
+                                    <p className="text-sm text-slate-700">Reference: <strong className="text-slate-900">{generateReference().slice(0, 20)}</strong></p>
                                 </div>
-                                <div className="h-px bg-slate-200 my-4"></div>
-                                <div className="space-y-1">
-                                    <p className="text-sm font-bold text-slate-900">MTN MoMo: *182*8*1*912672#</p>
-                                    <p className="text-sm font-bold text-slate-900">Names: Parfai</p>
-                                    <p className="text-sm font-bold text-slate-900">Airtel Money: *182*8*1*912672#</p>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-slate-900">Account number: 100166537511</p>
+                                        <p className="text-sm font-bold text-slate-900">Bank name: Bank of Kigali</p>
+                                        <p className="text-sm font-bold text-slate-900">Account name: Nkiza ltd</p>
+                                    </div>
+                                    <div className="h-px bg-slate-200 my-4"></div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-bold text-slate-900">MTN MoMo: *182*8*1*912672#</p>
+                                        <p className="text-sm font-bold text-slate-900">Names: Parfai</p>
+                                        <p className="text-sm font-bold text-slate-900">Airtel Money: *182*8*1*912672#</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
@@ -265,7 +349,7 @@ const CheckoutPage: React.FC = () => {
                     >
                         {isFree ? 'Go Back' : 'Go to Dashboard'}
                     </button>
-                    {!isFree && <p className="mt-4 text-xs text-slate-400">Your content will be activated once payment is verified by an Admin.</p>}
+                    {!isFree && <p className="mt-4 text-xs text-slate-400">Your content will be activated once payment is verified.</p>}
                 </div>
             </div>
         );
@@ -274,7 +358,6 @@ const CheckoutPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-6">
             <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
-                {/* Left: Item Info */}
                 <div className="space-y-8">
                     <div>
                         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors mb-6 font-bold text-sm">
@@ -312,7 +395,6 @@ const CheckoutPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Right: Summary & Action */}
                 <div className="lg:pt-24">
                     <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl sticky top-8">
                         <h2 className="text-xl font-bold mb-8">Summary</h2>
@@ -332,12 +414,58 @@ const CheckoutPage: React.FC = () => {
                             </div>
                         </div>
 
+                        {item && item.price > 0 && (
+                            <div className="space-y-4 mb-6">
+                                <div className="bg-slate-800 rounded-xl p-1">
+                                    <button
+                                        onClick={() => { setPaymentMethod('kitovu'); setKitovuFailed(false); }}
+                                        className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${paymentMethod === 'kitovu' && !kitovuFailed
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                            : 'text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined text-lg align-middle mr-2">smartphone</span>
+                                        Mobile Money (MTN MoMo / Airtel)
+                                    </button>
+                                    <button
+                                        onClick={() => setPaymentMethod('manual')}
+                                        className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${paymentMethod === 'manual' || kitovuFailed
+                                            ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                            : 'text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        <span className="material-symbols-outlined text-lg align-middle mr-2">account_balance</span>
+                                        Bank Transfer
+                                    </button>
+                                </div>
+
+                                {(paymentMethod === 'kitovu' && !kitovuFailed) && (
+                                    <div>
+                                        <label className="block text-xs text-slate-400 font-bold mb-2">
+                                            Mobile Money Number <span className="text-red-400">*</span>
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value)}
+                                            placeholder="e.g. 0788123456"
+                                            className="w-full h-12 px-4 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-slate-500 focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
+                                        />
+                                        <p className="text-[10px] text-slate-500 mt-2">You will receive a payment request on your phone. Enter your MoMo PIN to confirm.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button
                             onClick={handleConfirmOrder}
-                            disabled={processing}
+                            disabled={processing || (paymentMethod === 'kitovu' && !kitovuFailed && !phoneNumber && (item?.price || 0) > 0)}
                             className="w-full py-5 bg-primary text-white rounded-2xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-primary/40 disabled:opacity-50"
                         >
-                            {processing ? 'Processing...' : 'Confirm Order'}
+                            {processing ? 'Processing...' :
+                                paymentMethod === 'kitovu' && !kitovuFailed && (item?.price || 0) > 0
+                                    ? `Pay ${(item?.price || 0).toLocaleString()} RWF`
+                                    : 'Confirm Order'}
                         </button>
 
                         <div className="flex items-center justify-center gap-2 mt-8 opacity-50">

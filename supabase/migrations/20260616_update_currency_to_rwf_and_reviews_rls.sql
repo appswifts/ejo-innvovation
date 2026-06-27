@@ -16,15 +16,7 @@ UPDATE books SET currency = 'RWF' WHERE currency = 'USD';
 ALTER TABLE publication_packages ALTER COLUMN currency SET DEFAULT 'RWF';
 UPDATE publication_packages SET currency = 'RWF' WHERE currency = 'USD';
 
--- 5. Update polar_transactions default currency
-ALTER TABLE polar_transactions ALTER COLUMN currency SET DEFAULT 'RWF';
-UPDATE polar_transactions SET currency = 'RWF' WHERE currency = 'USD';
-
--- 6. Update dpo_transactions default currency
-ALTER TABLE dpo_transactions ALTER COLUMN currency SET DEFAULT 'RWF';
-UPDATE dpo_transactions SET currency = 'RWF' WHERE currency = 'USD';
-
--- 7. Enable RLS on reviews table and add policies
+-- 5. Enable RLS on reviews table and add policies
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if any
@@ -80,7 +72,7 @@ USING (
   )
 );
 
--- 8. Create storage buckets for manuscripts and library if they don't exist
+-- 6. Create storage buckets for manuscripts and library if they don't exist
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('manuscripts', 'manuscripts', true)
 ON CONFLICT (id) DO NOTHING;
@@ -141,7 +133,7 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'library' AND auth.uid() = owner);
 
--- 9. Add helpful function for checking user role
+-- 7. Add helpful function for checking user role
 CREATE OR REPLACE FUNCTION public.get_user_role_slug(p_user_id UUID)
 RETURNS TEXT AS $$
 DECLARE
