@@ -15,17 +15,28 @@ const EditorDashboard: React.FC = () => {
   const fetchManuscripts = async () => {
     try {
       setLoading(true);
-      // Fetch all manuscripts with submitter profile info
+
+      // Fetch all manuscripts (without join to avoid PostgREST 500)
       const { data, error } = await supabase
         .from('manuscripts')
-        .select(`
-          *,
-          submitter:profiles(full_name)
-        `)
+        .select('*')
         .order('submission_date', { ascending: false });
 
       if (error) throw error;
-      setManuscripts(data || []);
+
+      // Fetch submitter names separately
+      const msWithAuthors = await Promise.all(
+        (data || []).map(async (m) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', m.submitter_id)
+            .single();
+          return { ...m, submitter: profile || { full_name: 'Unknown' } };
+        })
+      );
+
+      setManuscripts(msWithAuthors);
     } catch (error) {
       console.error('Error fetching manuscripts:', error);
     } finally {

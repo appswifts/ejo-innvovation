@@ -8,7 +8,6 @@ interface ItemDetails {
     price: number;
     currency: string;
     description?: string;
-    whop_product_id?: string | null;
 }
 
 const CheckoutPage: React.FC = () => {
@@ -21,35 +20,9 @@ const CheckoutPage: React.FC = () => {
     const packageId = searchParams.get('package_id');
     const paymentStatus = searchParams.get('payment');
 
-    // Check for DPO/MoMo payment return
     useEffect(() => {
-        if (paymentStatus === 'success') {
-            const pendingTx = localStorage.getItem('pending_dpo_transaction');
-            if (pendingTx) {
-                try {
-                    const txData = JSON.parse(pendingTx);
-                    // Verify the transaction with our backend
-                    supabase.functions.invoke('dpo-callback', {
-                        body: {
-                            trans_token: txData.transToken,
-                            status: 'completed'
-                        }
-                    }).then(() => {
-                        localStorage.removeItem('pending_dpo_transaction');
-                        setOrderSuccess(true);
-                    }).catch((err) => {
-                        console.error('DPO verification error:', err);
-                        localStorage.removeItem('pending_dpo_transaction');
-                        setOrderSuccess(true);
-                    });
-                } catch (e) {
-                    console.error('Error parsing pending DPO transaction:', e);
-                }
-            } else {
-                setOrderSuccess(true);
-            }
-        } else if (paymentStatus === 'cancelled') {
-            alert('Payment was cancelled. You can try again or choose a different payment method.');
+        if (paymentStatus === 'cancelled') {
+            alert('Payment was cancelled. You can try again.');
         }
     }, [paymentStatus]);
 
@@ -57,8 +30,6 @@ const CheckoutPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'manual' | 'polar' | 'whop' | 'dpo'>('manual');
-    const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!loading && !user) {
@@ -72,7 +43,6 @@ const CheckoutPage: React.FC = () => {
             return;
         }
         fetchItemDetails();
-        fetchPaymentSettings();
     }, [type, id, packageId, user]);
 
     const fetchItemDetails = async () => {
@@ -177,39 +147,6 @@ const CheckoutPage: React.FC = () => {
         }
     };
 
-    // Helper to interpret boolean flags from settings (stored as strings)
-    const isEnabled = (key: string, defaultValue: boolean) => {
-        const raw = paymentSettings[key];
-        if (raw === undefined) return defaultValue;
-        const normalized = raw.toLowerCase();
-        if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
-        if (['false', '0', 'no', 'off'].includes(normalized)) return false;
-        return defaultValue;
-    };
-
-    const itemWhopProductId = (item as any)?.whop_product_id;
-
-    const whopUrl = itemWhopProductId
-        ? `https://whop.com/checkout/${itemWhopProductId}`
-        : (type === 'subscription' && paymentSettings.whop_subscription_checkout_url) ||
-        (type === 'article' && paymentSettings.whop_article_checkout_url) ||
-        (type === 'book' && paymentSettings.whop_book_checkout_url) ||
-        // Check if whop_checkout_url is just a product ID or a full URL
-        (paymentSettings.whop_checkout_url?.startsWith('http')
-            ? paymentSettings.whop_checkout_url
-            : `https://whop.com/checkout/${paymentSettings.whop_checkout_url}`);
-
-    const isWhopEnabled = false;
-    const isPolarEnabled = false;
-    const isManualEnabled = true;
-    const isDpoEnabled = true;
-
-    // Default to manual
-    useEffect(() => {
-        if (!item) return;
-        setPaymentMethod('manual');
-    }, [item]);
-
     const handleConfirmOrder = async () => {
         if (!user || !item) return;
 
@@ -250,178 +187,6 @@ const CheckoutPage: React.FC = () => {
                 setOrderSuccess(true);
                 setProcessing(false);
                 return;
-            }
-
-            // Guard against selecting a disabled method
-            if (paymentMethod === 'whop' && !isWhopEnabled) {
-                alert('Whop payments are currently disabled. Please choose another payment method.');
-                setProcessing(false);
-                return;
-            }
-            if (paymentMethod === 'polar' && !isPolarEnabled) {
-                alert('Polar payments are currently disabled. Please choose another payment method.');
-                setProcessing(false);
-                return;
-            }
-            if (paymentMethod === 'manual' && !isManualEnabled) {
-                alert('Manual bank transfers are currently disabled. Please choose another payment method.');
-                setProcessing(false);
-                return;
-            }
-            if (paymentMethod === 'dpo' && !isDpoEnabled) {
-                alert('Mobile Money payments are currently disabled. Please choose another payment method.');
-                setProcessing(false);
-                return;
-            }
-
-            if (paymentMethod === 'whop') {
-                // Whop checkout via dynamic API checkout session
-                const whopProductId = paymentSettings.whop_checkout_url || 'prod_PiiwGSfXpchGv';
-
-                if (!whopProductId) {
-                    alert('Whop is not configured. Please contact the site administrator.');
-                    setProcessing(false);
-                    return;
-                }
-
-                try {
-                    const { data: result, error: fnError } = await supabase.functions.invoke('whop-checkout', {
-                        body: {
-                            productId: whopProductId,
-                            price: item?.price || 0,
-                            currency: item?.currency || 'rwf',
-                            itemName: item?.title || '',
-                            email: user.email || '',
-                            userId: user.id,
-                            itemId: id || '',
-                            itemType: type || '',
-                            packageId: packageId || '',
-                            returnUrl: window.location.origin + '/dashboard',
-                        },
-                    });
-
-                    if (fnError || !result?.checkoutUrl) {
-                        console.error('Whop checkout error:', fnError || result);
-                        alert('Failed to create Whop checkout. Please try again or choose another payment method.');
-                        setProcessing(false);
-                        return;
-                    }
-
-                    window.location.href = result.checkoutUrl;
-                } catch (whopError) {
-                    console.error('Whop checkout error:', whopError);
-                    alert('Failed to create checkout session. Please try again.');
-                    setProcessing(false);
-                }
-                return;
-            }
-
-            if (paymentMethod === 'polar') {
-                // Polar Payment Flow
-                try {
-                    const { createCheckoutSession } = await import('../../lib/polar');
-
-                    // Build metadata, resolving packageId for subscriptions
-                    let resolvedPackageId: string | undefined = undefined;
-                    if (type === 'subscription') {
-                        const { data: journal } = await supabase
-                            .from('journals')
-                            .select('subscription_package_id')
-                            .eq('id', id)
-                            .single();
-                        resolvedPackageId = journal?.subscription_package_id || undefined;
-                    } else if (type === 'manuscript') {
-                        resolvedPackageId = packageId || undefined;
-                    }
-
-                    const response = await createCheckoutSession(
-                        item.price,
-                        item.currency,
-                        user.email || '',
-                        {
-                            userId: user.id,
-                            type: type || 'general',
-                            itemId: id || 'unknown',
-                            ...(resolvedPackageId ? { packageId: resolvedPackageId } : {})
-                        }
-                    );
-
-                    // Redirect to Polar Checkout Page
-                    if (response?.url) {
-                        window.location.href = response.url;
-                        return;
-                    } else {
-                        throw new Error("No checkout URL returned from payment provider.");
-                    }
-                } catch (polarError: any) {
-                    console.error("Polar Flow Error:", polarError);
-                    alert("Payment Error: " + (polarError.message || "Failed to initialize checkout session. Please try again or use bank transfer."));
-                    setProcessing(false);
-                    return;
-                }
-            }
-
-            if (paymentMethod === 'dpo') {
-                // DPO / Mobile Money Checkout
-                try {
-                    let resolvedPackageId: string | undefined = undefined;
-                    if (type === 'subscription') {
-                        const { data: journal } = await supabase
-                            .from('journals')
-                            .select('subscription_package_id')
-                            .eq('id', id)
-                            .single();
-                        resolvedPackageId = journal?.subscription_package_id || undefined;
-                    } else if (type === 'manuscript') {
-                        resolvedPackageId = packageId || undefined;
-                    }
-
-                    const { data: result, error: fnError } = await supabase.functions.invoke('dpo-checkout', {
-                        body: {
-                            amount: item?.price || 0,
-                            currency: item?.currency || 'RWF',
-                            ref_id: id || '',
-                            ref_type: type || 'general',
-                            user_id: user.id,
-                            customer_email: user.email || '',
-                            success_url: window.location.origin + `/checkout?type=${type}&id=${id}${packageId ? `&package_id=${packageId}` : ''}&payment=success`,
-                            cancel_url: window.location.origin + `/checkout?type=${type}&id=${id}${packageId ? `&package_id=${packageId}` : ''}&payment=cancelled`,
-                            metadata: {
-                                itemTitle: item?.title || '',
-                                ...(resolvedPackageId ? { packageId: resolvedPackageId } : {})
-                            }
-                        }
-                    });
-
-                    // If DPO function is not deployed or failed, fallback to manual payment
-                    if (fnError) {
-                        console.warn('DPO checkout function error (likely not deployed):', fnError);
-                        alert('Mobile Money gateway is temporarily unavailable. Falling back to Manual Payment (Bank Transfer / MTN Momo). Please complete your order and follow the payment instructions.');
-                        // Continue to manual payment flow below instead of returning
-                    } else if (!result?.checkout_url) {
-                        console.error('DPO checkout returned no URL:', result);
-                        alert('Mobile Money checkout could not be created. Falling back to Manual Payment.');
-                        // Continue to manual payment flow below
-                    } else {
-                        // DPO Success — save pending transaction and redirect
-                        if (result.transaction_id) {
-                            localStorage.setItem('pending_dpo_transaction', JSON.stringify({
-                                transactionId: result.transaction_id,
-                                transToken: result.trans_token,
-                                itemType: type,
-                                itemId: id,
-                                timestamp: Date.now()
-                            }));
-                        }
-                        window.location.href = result.checkout_url;
-                        return; // Only return on actual success
-                    }
-                } catch (dpoError: any) {
-                    console.error('DPO checkout exception:', dpoError);
-                    alert('Mobile Money gateway error: ' + (dpoError.message || 'Service unavailable') + '. Falling back to Manual Payment.');
-                    // Continue to manual payment flow below
-                }
-                // If we reach here, DPO failed but we fall through to manual payment
             }
 
             // Manual Bank Transfer Flow
@@ -558,49 +323,9 @@ const CheckoutPage: React.FC = () => {
                     <div className="p-6 bg-amber-50 rounded-2xl border border-amber-100 flex gap-4">
                         <span className="material-symbols-outlined text-amber-600">info</span>
                         <p className="text-xs text-amber-800 leading-relaxed font-medium">
-                            <strong>Note:</strong> You can pay via Mobile Money (MTN MoMo, Airtel Money) or Bank Transfer. Your content will be activated once payment is verified.{' '}
+                            <strong>Note:</strong> Your content will be activated once payment is verified.{' '}
                             After paying, please call or text us on WhatsApp at <strong>+250 732 752 616</strong> so we can approve your payment as fast as possible.
                         </p>
-                    </div>
-
-                    {/* Payment Method Selection */}
-                    <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mt-8">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6 underline decoration-primary decoration-4 underline-offset-8">Payment Method</p>
-                        <div className="space-y-4">
-                            {/* DPO / Mobile Money */}
-                            <button
-                                onClick={() => setPaymentMethod('dpo')}
-                                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${paymentMethod === 'dpo' ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/30'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'dpo' ? 'border-primary' : 'border-slate-300'}`}>
-                                        {paymentMethod === 'dpo' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="font-bold text-slate-900 block">Mobile Money (MTN MoMo / Airtel)</span>
-                                        <span className="text-xs text-slate-500">Pay instantly with your mobile wallet</span>
-                                    </div>
-                                </div>
-                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Online</span>
-                            </button>
-
-                            {/* Manual Payment */}
-                            <button
-                                onClick={() => setPaymentMethod('manual')}
-                                className={`w-full p-4 rounded-xl border-2 flex items-center justify-between transition-all ${paymentMethod === 'manual' ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/30'}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'manual' ? 'border-primary' : 'border-slate-300'}`}>
-                                        {paymentMethod === 'manual' && <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>}
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="font-bold text-slate-900 block">Bank Transfer / MTN Momo Manual</span>
-                                        <span className="text-xs text-slate-500">Send payment manually and we verify it</span>
-                                    </div>
-                                </div>
-                                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Offline</span>
-                            </button>
-                        </div>
                     </div>
                 </div>
 

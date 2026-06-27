@@ -1,15 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const DashboardLayout: React.FC = () => {
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, loading } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [fabOpen, setFabOpen] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
 
+    useEffect(() => {
+        if (!loading && !user) {
+            navigate('/login', { replace: true });
+        }
+    }, [user, loading, navigate]);
+
+    if (loading) return <LoadingSpinner />;
     if (!user || !profile) return null;
 
 
