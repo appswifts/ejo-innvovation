@@ -49,8 +49,35 @@ const BookReader: React.FC = () => {
             if (bookError || !bookData) throw new Error('Book not found');
             setBook(bookData);
 
-            // 2. Check Purchase Status (unless it's free, but here we assume all need purchase or are restricted)
-            // For now, we check if there's a successful transaction for this book_id by this user
+            // 2. Check editor role for authenticated users (needed before any early return)
+            let isUserEditor = false;
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role_id')
+                    .eq('id', user.id)
+                    .single();
+
+                const { data: role } = await supabase
+                    .from('roles')
+                    .select('slug')
+                    .eq('id', profile?.role_id)
+                    .single();
+
+                if (['super_admin', 'editor'].includes(role?.slug)) {
+                    isUserEditor = true;
+                    setIsEditor(true);
+                }
+            }
+
+            // 3. Free books — grant access without authentication
+            if (bookData.price <= 0) {
+                setHasAccess(true);
+                setLoading(false);
+                return;
+            }
+
+            // Paid books require authentication
             if (!user) {
                 setHasAccess(false);
                 setLoading(false);
@@ -64,25 +91,6 @@ const BookReader: React.FC = () => {
                 .eq('book_id', id)
                 .eq('status', 'completed')
                 .maybeSingle();
-
-            // If user is super_admin, they always have access
-            // (This logic might be expanded if we have a proper usePermissions hook)
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role_id')
-                .eq('id', user.id)
-                .single();
-
-            const { data: role } = await supabase
-                .from('roles')
-                .select('slug')
-                .eq('id', profile?.role_id)
-                .single();
-
-            const isUserEditor = ['super_admin', 'editor'].includes(role?.slug);
-            if (isUserEditor) {
-                setIsEditor(true);
-            }
 
             if (isUserEditor || transaction || bookData.seller_id === user.id) {
                 setHasAccess(true);
@@ -276,13 +284,15 @@ const BookReader: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleDownload}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
-                        title="Download PDF"
-                    >
-                        <span className="material-symbols-outlined">download</span>
-                    </button>
+                    {isEditor && (
+                        <button
+                            onClick={handleDownload}
+                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                            title="Download PDF (Admin only)"
+                        >
+                            <span className="material-symbols-outlined">download</span>
+                        </button>
+                    )}
                     <button
                         className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
                         onClick={() => {

@@ -88,33 +88,37 @@ const BooksPage: React.FC = () => {
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const handlePurchase = async (book: Book) => {
-    if (!user) {
-      navigate('/login');
+    // Free book — no auth required, navigate directly to reader
+    if (book.price <= 0) {
+      if (user) {
+        // Logged-in users still get a transaction for the "Owned" badge
+        setClaimingId(book.id);
+        try {
+          const { error } = await supabase.from('transactions').insert({
+            user_id: user.id,
+            book_id: book.id,
+            amount: 0,
+            currency: 'RWF',
+            type: 'purchase',
+            status: 'completed',
+            description: `Free access: ${book.title}`,
+            payment_gateway: 'free',
+          });
+          if (error) throw error;
+          setPurchasedBookIds(prev => new Set([...prev, book.id]));
+        } catch (err: any) {
+          console.error('Error claiming free book:', err);
+          alert('Failed to claim book: ' + err.message);
+        } finally {
+          setClaimingId(null);
+        }
+      }
+      navigate(`/book/read/${book.id}`);
       return;
     }
 
-    // Free book — grant access immediately
-    if (book.price <= 0) {
-      setClaimingId(book.id);
-      try {
-        const { error } = await supabase.from('transactions').insert({
-          user_id: user.id,
-          book_id: book.id,
-          amount: 0,
-          currency: 'RWF',
-          type: 'purchase',
-          status: 'completed',
-          description: `Free access: ${book.title}`,
-          payment_gateway: 'free',
-        });
-        if (error) throw error;
-        setPurchasedBookIds(prev => new Set([...prev, book.id]));
-      } catch (err: any) {
-        console.error('Error claiming free book:', err);
-        alert('Failed to claim book: ' + err.message);
-      } finally {
-        setClaimingId(null);
-      }
+    if (!user) {
+      navigate('/login');
       return;
     }
 

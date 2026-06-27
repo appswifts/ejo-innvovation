@@ -142,7 +142,7 @@ const LandingPage: React.FC = () => {
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
 
         <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <span className="inline-block py-1 px-3 rounded-full bg-primary/20 border border-primary/30 text-blue-100 text-xs font-semibold tracking-wider mb-6 uppercase">Welcome to Nkiza Center for Research</span>
+
           <h1 className="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-4 leading-tight">
             Where Knowledge Begins <br />
             <span className="text-blue-400 drop-shadow-lg">and the Future is Built</span>
