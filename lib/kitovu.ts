@@ -6,7 +6,7 @@ export interface KitovuCheckoutRequest {
   reference: string;
   senderName?: string;
   description?: string;
-  paymentRail?: 'mtn' | 'airtel';
+  paymentRail?: 'mtn';
   userId?: string;
   refType?: string;
   refId?: string;
@@ -38,15 +38,13 @@ export const createKitovuCheckout = async (
 export const checkKitovuStatus = async (
   merchantReference: string
 ): Promise<{ status: string; amount?: number; currency?: string } | null> => {
-  const { data, error } = await supabase
-    .from('kitovu_transactions')
-    .select('status, amount, currency')
-    .eq('merchant_reference', merchantReference)
-    .maybeSingle();
+  const { data, error } = await supabase.functions.invoke('kitovu-status', {
+    body: { merchantReference },
+  });
 
   if (error) {
     throw new Error('Failed to check payment status');
   }
 
-  return data;
+  return data?.transaction ?? null;
 };

@@ -23,6 +23,7 @@ Deno.serve(async (req: Request) => {
     const callbackReference = url.searchParams.get('reference') || '';
     const externalId = payload.externalId || callbackReference;
     const kitovuReference = payload.transactionId || externalId;
+    let merchantReference = externalId;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -57,9 +58,10 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (existingTracked) {
+        merchantReference = existingTracked.merchant_reference;
         const { error: kitovuUpdateError } = await supabase
           .from('kitovu_transactions')
-          .update({ ...transactionUpdate, ...(externalId ? { merchant_reference: externalId } : {}) })
+          .update(transactionUpdate)
           .eq('id', existingTracked.id);
         if (kitovuUpdateError) {
           console.error('Error updating kitovu transaction:', kitovuUpdateError);
@@ -78,13 +80,14 @@ Deno.serve(async (req: Request) => {
     } else if (externalId) {
       const { data: matched, error: matchError } = await supabase
         .from('kitovu_transactions')
-        .select('id, kitovu_reference')
-        .eq('merchant_reference', externalId)
+        .select('id, kitovu_reference, merchant_reference')
+        .eq('metadata->>external_id', externalId)
         .limit(1);
 
       if (matchError) {
         console.error('Error finding kitovu transaction:', matchError);
       } else if (matched && matched.length > 0) {
+        merchantReference = matched[0].merchant_reference;
         const { error: updateError } = await supabase
           .from('kitovu_transactions')
           .update(transactionUpdate)
@@ -108,7 +111,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (status === 'completed' && externalId) {
-      const merchantRef = externalId;
+      const merchantRef = merchantReference;
       const description = `KitovuPay:${merchantRef}`;
 
       const { data: tracked } = await supabase

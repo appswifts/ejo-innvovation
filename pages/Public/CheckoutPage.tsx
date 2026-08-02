@@ -30,7 +30,7 @@ const CheckoutPage: React.FC = () => {
     const [processing, setProcessing] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [mobileNetwork, setMobileNetwork] = useState<'mtn' | 'airtel'>('mtn');
+    const mobileNetwork = 'mtn' as const;
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pesapal');
     const [kitovuFailed, setKitovuFailed] = useState(false);
     const [pesapalFailed, setPesapalFailed] = useState(false);
@@ -604,7 +604,7 @@ const CheckoutPage: React.FC = () => {
                                             }`}
                                     >
                                         <span className="material-symbols-outlined text-lg align-middle mr-2">smartphone</span>
-                                        Mobile Money (MTN MoMo / Airtel)
+                                        Mobile Money (MTN MoMo)
                                     </button>
                                 </div>
 
@@ -620,31 +620,7 @@ const CheckoutPage: React.FC = () => {
 
                                 {paymentMethod === 'kitovu' && (
                                     <div>
-                                        <label className="block text-xs text-slate-400 font-bold mb-2">
-                                            Mobile Money Network <span className="text-red-400">*</span>
-                                        </label>
-                                        <div className="grid grid-cols-2 gap-2 mb-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setMobileNetwork('mtn')}
-                                                className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${mobileNetwork === 'mtn'
-                                                    ? 'bg-yellow-400 text-slate-900 border-yellow-400'
-                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-yellow-400/50'
-                                                    }`}
-                                            >
-                                                MTN MoMo
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setMobileNetwork('airtel')}
-                                                className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${mobileNetwork === 'airtel'
-                                                    ? 'bg-red-500 text-white border-red-500'
-                                                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-red-400/50'
-                                                    }`}
-                                            >
-                                                Airtel Money
-                                            </button>
-                                        </div>
+                                        <p className="text-xs font-bold text-yellow-400 mb-3">MTN MoMo</p>
                                         <label className="block text-xs text-slate-400 font-bold mb-2">
                                             Mobile Money Number <span className="text-red-400">*</span>
                                         </label>

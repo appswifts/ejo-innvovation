@@ -9,7 +9,7 @@ interface CheckoutRequest {
   reference: string;
   senderName?: string;
   description?: string;
-  paymentRail?: 'mtn' | 'airtel';
+  paymentRail?: 'mtn';
   userId?: string;
   refType?: string;
   refId?: string;
@@ -25,14 +25,14 @@ Deno.serve(async (req: Request) => {
     const { amount, phoneNumber, reference, senderName, description, paymentRail, userId, refType, refId } = body;
 
     const apiKey = Deno.env.get('KITOVU_API_KEY') || '';
-    const apiSecret = Deno.env.get('KITOVU_CLIENT_SECRET') || '';
-    const baseUrl = Deno.env.get('KITOVU_API_URL') || 'https://gateway.uat.kitovupay.com';
-    const webhookBase = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '') || 'https://ypvwkynsfhdecccnljcd.functions.supabase.co';
+    const apiSecret = Deno.env.get('KITOVU_API_SECRET') || Deno.env.get('KITOVU_CLIENT_SECRET') || '';
+    const baseUrl = (Deno.env.get('KITOVU_API_URL') || 'https://gateway.uat.kitovupay.com').replace(/\/$/, '');
+    const webhookBase = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '') || '';
 
-    if (!apiKey || !apiSecret) {
+    if (!apiKey || !apiSecret || !webhookBase) {
       return new Response(
         JSON.stringify({ success: false, message: 'KitovuPay not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
@@ -43,12 +43,18 @@ Deno.serve(async (req: Request) => {
         ? '250' + cleanPhone.slice(1)
         : '250' + cleanPhone;
 
-    const isAirtel = formattedPhone.startsWith('25078') || formattedPhone.startsWith('25079');
-    const detectedRail = isAirtel ? 'airtel' : 'mtn';
-    const paymentRailToUse = paymentRail === 'mtn' || paymentRail === 'airtel' ? paymentRail : detectedRail;
+    if (!/^2507\d{8}$/.test(formattedPhone)) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Enter a valid Rwanda mobile number (2507XXXXXXXX)' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const paymentRailToUse = 'mtn';
 
     const path = '/merchant-transaction/merchant/collection/mobile_money';
-    const callbackUrl = `${webhookBase}/kitovu-webhook?reference=${encodeURIComponent(reference)}`;
+    const callbackUrl = `${webhookBase}/functions/v1/kitovu-webhook`;
+    const externalId = crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000;
 
     const requestBody = {
       amount,
@@ -58,7 +64,7 @@ Deno.serve(async (req: Request) => {
       sender_account_number: formattedPhone,
       description: description || 'Payment',
       callbackUrl,
-      externalId: reference,
+      externalId: externalId.toString(),
     };
 
     const bodyJson = JSON.stringify(requestBody);
@@ -98,12 +104,10 @@ Deno.serve(async (req: Request) => {
       console.error('KitovuPay API error:', kitovuResponse.status, JSON.stringify(kitovuData));
       return new Response(
         JSON.stringify({
-          success: true,
-          reference,
-          message: 'Payment request received. Our team will contact you.',
-          fallback: true,
+          success: false,
+          message: kitovuData?.message || kitovuData?.details || 'KitovuPay rejected the payment request',
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: kitovuResponse.status }
       );
     }
 
@@ -124,7 +128,7 @@ Deno.serve(async (req: Request) => {
         currency: 'RWF',
         phone_number: formattedPhone,
         status: 'pending',
-        metadata: { payment_rail: paymentRailToUse },
+        metadata: { payment_rail: paymentRailToUse, external_id: externalId.toString() },
       }, { onConflict: 'kitovu_reference' });
 
       if (trackError) {
@@ -143,15 +147,14 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: any) {
-    console.error('Kitovu checkout error:', error.message);
+    console.error('Kitovu checkout error:', error.message, error.stack);
 
     return new Response(
       JSON.stringify({
-        success: true,
-        message: 'Payment request received. Our team will contact you.',
-        fallback: true,
+        success: false,
+        message: error.message || 'Unable to initiate KitovuPay payment',
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
 });
