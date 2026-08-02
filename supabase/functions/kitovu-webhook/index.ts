@@ -4,14 +4,11 @@ const corsHeaders = {
 };
 
 interface KitovuWebhookPayload {
-  event: string;
-  reference: string;
-  merchant_reference: string;
-  amount: number;
-  currency: string;
-  phone_number?: string;
+  transactionId?: string;
+  externalId: string;
   status: string;
-  metadata?: Record<string, any>;
+  amount?: number;
+  message?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,90 +19,142 @@ Deno.serve(async (req: Request) => {
   try {
     const payload: KitovuWebhookPayload = await req.json();
 
+    const url = new URL(req.url);
+    const callbackReference = url.searchParams.get('reference') || '';
+    const externalId = payload.externalId || callbackReference;
+    const kitovuReference = payload.transactionId || externalId;
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const webhookSecret = Deno.env.get('KITOVU_WEBHOOK_SECRET') || '';
 
-    // Verify webhook signature if configured
-    const signature = req.headers.get('x-kitovu-signature');
-    if (webhookSecret && signature) {
-      const encoder = new TextEncoder();
-      const key = encoder.encode(webhookSecret);
-      const message = encoder.encode(JSON.stringify(payload));
-      const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
-      const expectedSig = await crypto.subtle.sign('HMAC', cryptoKey, message);
-      const expectedHex = Array.from(new Uint8Array(expectedSig)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-      if (signature !== expectedHex) {
-        return new Response('Invalid signature', { status: 401 });
-      }
+    let status = 'pending';
+    const statusUpper = (payload.status || '').toUpperCase();
+    if (['APPROVED', 'SUCCESSFUL', 'COMPLETED', 'SUCCESS', 'SUCCEEDED'].includes(statusUpper)) {
+      status = 'completed';
+    } else if (['REJECTED', 'FAILED', 'FAIL', 'CANCELLED', 'CANCELED', 'DECLINED', 'EXPIRED', 'TIMEOUT'].includes(statusUpper)) {
+      status = 'failed';
     }
 
     const { createClient } = await import('npm:@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine transaction status
-    let status = 'pending';
-    if (payload.status === 'completed' || payload.status === 'success') {
-      status = 'completed';
-    } else if (payload.status === 'failed' || payload.status === 'cancelled') {
-      status = 'failed';
-    }
-
-    // Upsert kitovu_transactions record
-    const { error: kitovuError } = await supabase.from('kitovu_transactions').upsert({
-      kitovu_reference: payload.reference,
-      merchant_reference: payload.merchant_reference,
-      amount: payload.amount,
-      currency: payload.currency || 'RWF',
-      phone_number: payload.phone_number,
+    const transactionUpdate: Record<string, unknown> = {
+      currency: 'RWF',
       status,
-      metadata: payload.metadata || {},
+      metadata: { status: payload.status, message: payload.message },
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'kitovu_reference' });
+    };
 
-    if (kitovuError) {
-      console.error('Error saving kitovu transaction:', kitovuError);
+    if (typeof payload.amount === 'number' && payload.amount > 0) {
+      transactionUpdate.amount = payload.amount;
     }
 
-    // Sync to main transactions table on completion
-    if (status === 'completed') {
-      const merchantRef = payload.merchant_reference;
-      const parts = merchantRef.split('_');
-      const refType = parts[0];
-      const refId = parts.slice(1).join('_');
+    if (payload.transactionId) {
+      const { data: existingTracked } = await supabase
+        .from('kitovu_transactions')
+        .select('id, merchant_reference')
+        .eq('kitovu_reference', payload.transactionId)
+        .maybeSingle();
 
-      const transactionData: any = {
-        user_id: payload.metadata?.user_id || null,
-        amount: payload.amount,
-        currency: payload.currency || 'RWF',
-        status: 'completed',
-        type: refType === 'subscription' ? 'journal_subscription'
-          : refType === 'apc' ? 'apc_payment'
-          : refType === 'book' ? 'book_purchase'
-          : 'purchase',
-        description: 'KitovuPay payment',
-        payment_gateway: 'kitovu',
-        manuscript_id: refType === 'apc' || refType === 'article' ? refId : null,
-        book_id: refType === 'book' ? refId : null,
-        package_id: payload.metadata?.package_id || null,
+      if (existingTracked) {
+        const { error: kitovuUpdateError } = await supabase
+          .from('kitovu_transactions')
+          .update({ ...transactionUpdate, ...(externalId ? { merchant_reference: externalId } : {}) })
+          .eq('id', existingTracked.id);
+        if (kitovuUpdateError) {
+          console.error('Error updating kitovu transaction:', kitovuUpdateError);
+        }
+      } else {
+        const { error: kitovuError } = await supabase.from('kitovu_transactions').insert({
+          kitovu_reference: payload.transactionId,
+          merchant_reference: externalId,
+          amount: typeof payload.amount === 'number' && payload.amount > 0 ? payload.amount : 0,
+          ...transactionUpdate,
+        });
+        if (kitovuError) {
+          console.error('Error saving kitovu transaction:', kitovuError);
+        }
+      }
+    } else if (externalId) {
+      const { data: matched, error: matchError } = await supabase
+        .from('kitovu_transactions')
+        .select('id, kitovu_reference')
+        .eq('merchant_reference', externalId)
+        .limit(1);
+
+      if (matchError) {
+        console.error('Error finding kitovu transaction:', matchError);
+      } else if (matched && matched.length > 0) {
+        const { error: updateError } = await supabase
+          .from('kitovu_transactions')
+          .update(transactionUpdate)
+          .eq('id', matched[0].id);
+        if (updateError) {
+          console.error('Error updating kitovu transaction:', updateError);
+        }
+      } else {
+        const { error: insertError } = await supabase.from('kitovu_transactions').insert({
+          kitovu_reference: externalId,
+          merchant_reference: externalId,
+          amount: typeof payload.amount === 'number' && payload.amount > 0 ? payload.amount : 0,
+          ...transactionUpdate,
+        });
+        if (insertError) {
+          console.error('Error inserting kitovu transaction:', insertError);
+        }
+      }
+    } else {
+      console.warn('Kitovu webhook received without transactionId/externalId/reference:', JSON.stringify(payload));
+    }
+
+    if (status === 'completed' && externalId) {
+      const merchantRef = externalId;
+      const description = `KitovuPay:${merchantRef}`;
+
+      const { data: tracked } = await supabase
+        .from('kitovu_transactions')
+        .select('user_id, ref_type, ref_id')
+        .eq('merchant_reference', merchantRef)
+        .maybeSingle();
+
+      const refType = tracked?.ref_type || '';
+      const refId = tracked?.ref_id || '';
+
+      const typeMap: Record<string, string> = {
+        subscription: 'journal_subscription',
+        apc: 'apc_payment',
+        book: 'book_purchase',
+        article: 'purchase',
       };
 
-      if (payload.metadata?.user_id) {
-        transactionData.user_id = payload.metadata.user_id;
-      }
+      const transactionData: any = {
+        user_id: tracked?.user_id || null,
+        amount: payload.amount || 0,
+        currency: 'RWF',
+        status: 'completed',
+        type: typeMap[refType] || 'purchase',
+        description,
+        payment_gateway: 'kitovu',
+      };
 
-      // Check for duplicate
+      if (refType === 'apc' || refType === 'article') transactionData.manuscript_id = refId;
+      if (refType === 'book') transactionData.book_id = refId;
+
       const { data: existing } = await supabase
         .from('transactions')
         .select('id')
-        .eq('payment_gateway', 'kitovu')
-        .eq('description', `KitovuPay:${payload.reference}`)
+        .eq('description', description)
         .maybeSingle();
 
-      if (!existing) {
-        transactionData.description = `KitovuPay:${payload.reference}`;
-
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update({ status: 'completed', payment_gateway: 'kitovu' })
+          .eq('id', existing.id);
+        if (updateError) {
+          console.error('Error updating transaction:', updateError);
+        }
+      } else {
         const { error: txError } = await supabase.from('transactions').insert(transactionData);
         if (txError) {
           console.error('Error syncing transaction:', txError);
@@ -114,7 +163,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ received: true }),
+      JSON.stringify({ success: true, message: 'Webhook received and processed', transactionId: kitovuReference }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: any) {

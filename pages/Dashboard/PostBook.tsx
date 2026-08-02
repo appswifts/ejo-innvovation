@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { BOOK_TYPES, BookType } from '../../types';
+import { createKitovuCheckout, checkKitovuStatus } from '../../lib/kitovu';
+import { createPesapalCheckout, checkPesapalStatus, generatePesapalReference } from '../../lib/pesapal';
 
 type Step = 'details' | 'files' | 'payment' | 'complete';
 
@@ -10,6 +12,7 @@ const BOOK_POSTING_FEE = 25000;
 
 const PostBook: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user } = useAuth();
     const [step, setStep] = useState<Step>('details');
     const [submitting, setSubmitting] = useState(false);
@@ -18,6 +21,74 @@ const PostBook: React.FC = () => {
     const [processingPayment, setProcessingPayment] = useState(false);
     const [createdBookId, setCreatedBookId] = useState<string | null>(null);
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [mobileNetwork, setMobileNetwork] = useState<'mtn' | 'airtel'>('mtn');
+    const [paymentMethod, setPaymentMethod] = useState<'pesapal' | 'kitovu' | 'manual'>('pesapal');
+    const [kitovuFailed, setKitovuFailed] = useState(false);
+    const [pesapalFailed, setPesapalFailed] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+    const [kitovuPending, setKitovuPending] = useState(false);
+    const [kitovuReference, setKitovuReference] = useState('');
+    const [kitovuPaid, setKitovuPaid] = useState(false);
+
+    const callbackTrackingId = searchParams.get('OrderTrackingId');
+
+    useEffect(() => {
+        if (callbackTrackingId) {
+            setVerifying(true);
+            const poll = setInterval(async () => {
+                try {
+                    const result = await checkPesapalStatus(callbackTrackingId);
+                    if (result && result.status !== 'pending') {
+                        clearInterval(poll);
+                        setVerifying(false);
+                        setStep('complete');
+                    }
+                } catch (error) {
+                    console.error('Status check error:', error);
+                }
+            }, 4000);
+
+            setTimeout(() => clearInterval(poll), 120000);
+
+            return () => clearInterval(poll);
+        }
+    }, [callbackTrackingId]);
+
+    useEffect(() => {
+        if (!kitovuPending || !kitovuReference) return;
+
+        const deadline = Date.now() + 180000;
+
+        const poll = setInterval(async () => {
+            try {
+                const status = await checkKitovuStatus(kitovuReference);
+                if (!status) return;
+
+                if (status.status === 'completed') {
+                    clearInterval(poll);
+                    setKitovuPending(false);
+                    setKitovuPaid(true);
+                    setStep('complete');
+                } else if (status.status === 'failed') {
+                    clearInterval(poll);
+                    setKitovuPending(false);
+                    setKitovuFailed(true);
+                    setPaymentMethod('manual');
+                    alert('Payment failed. Please try again or contact support.');
+                } else if (Date.now() > deadline) {
+                    clearInterval(poll);
+                    setKitovuPending(false);
+                    setKitovuFailed(true);
+                    setPaymentMethod('manual');
+                    alert('Payment confirmation timed out. If you paid, contact support with your reference.');
+                }
+            } catch (error) {
+                console.error('Kitovu status check error:', error);
+            }
+        }, 4000);
+
+        return () => clearInterval(poll);
+    }, [kitovuPending, kitovuReference]);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -84,48 +155,118 @@ const PostBook: React.FC = () => {
         try {
             setProcessingPayment(true);
 
-            const { data, error } = await supabase.from('books').insert({
-                title: formData.title,
-                author_name: formData.author_name,
-                description: formData.description,
-                type: formData.type,
-                price: formData.price,
-                cover_url: formData.cover_url,
-                pdf_url: formData.pdf_url,
-                seller_id: user.id,
-                status: 'pending',
-            }).select().single();
+            let bookId = createdBookId;
 
-            if (error) throw error;
+            if (!bookId) {
+                const { data, error } = await supabase.from('books').insert({
+                    title: formData.title,
+                    author_name: formData.author_name,
+                    description: formData.description,
+                    type: formData.type,
+                    price: formData.price,
+                    cover_url: formData.cover_url,
+                    pdf_url: formData.pdf_url,
+                    seller_id: user.id,
+                    status: 'pending',
+                }).select().single();
 
-            const { data: kitovuResult, error: kitovuError } = await supabase.functions.invoke('kitovu-checkout', {
-                body: {
+                if (error) throw error;
+                bookId = data.id;
+                setCreatedBookId(bookId);
+            }
+
+            if (paymentMethod === 'pesapal' && !pesapalFailed) {
+                const reference = generatePesapalReference('book', bookId);
+
+                const result = await createPesapalCheckout({
                     amount: BOOK_POSTING_FEE,
                     currency: 'RWF',
-                    phoneNumber: phoneNumber,
-                    reference: `book_${data.id}_${Date.now()}`,
+                    reference,
                     description: `Book posting fee for "${formData.title}"`,
-                },
-            });
+                    callbackUrl: `${window.location.origin}/dashboard/post-book`,
+                    firstName: user?.user_metadata?.full_name || '',
+                    email: user?.email || '',
+                    phoneNumber: phoneNumber || '',
+                    userId: user.id,
+                    refType: 'book',
+                    refId: bookId,
+                });
 
-            if (kitovuError || kitovuResult?.fallback) {
-                await supabase.from('transactions').insert({
+                if (!result.success || !result.redirectUrl) {
+                    console.error('PesaPal checkout failed:', result.message);
+                    setPesapalFailed(true);
+                    setPaymentMethod('kitovu');
+                    setProcessingPayment(false);
+                    alert('Online payment is temporarily unavailable. Please use Mobile Money instead.');
+                    return;
+                }
+
+                window.location.href = result.redirectUrl;
+                return;
+            }
+
+            if (paymentMethod === 'kitovu' && !kitovuFailed) {
+                const reference = `book_${bookId}_${Date.now()}`;
+
+                const result = await createKitovuCheckout({
+                    amount: BOOK_POSTING_FEE,
+                    phoneNumber: phoneNumber,
+                    reference,
+                    senderName: user?.user_metadata?.full_name || user?.email || 'Customer',
+                    description: `Book posting fee for "${formData.title}"`,
+                    paymentRail: mobileNetwork,
+                    userId: user.id,
+                    refType: 'book',
+                    refId: bookId,
+                });
+
+                if (result.fallback) {
+                    await supabase.from('transactions').insert({
+                        user_id: user.id,
+                        amount: BOOK_POSTING_FEE,
+                        currency: 'RWF',
+                        type: 'book_purchase',
+                        status: 'pending',
+                        description: `Book posting fee for "${formData.title}"`,
+                        payment_gateway: 'manual',
+                        book_id: bookId,
+                    });
+
+                    setKitovuFailed(true);
+                    setPaymentMethod('manual');
+                    setProcessingPayment(false);
+                    return;
+                }
+
+                const { error } = await supabase.from('transactions').insert({
                     user_id: user.id,
                     amount: BOOK_POSTING_FEE,
                     currency: 'RWF',
                     type: 'book_purchase',
                     status: 'pending',
-                    description: `Book posting fee for "${formData.title}"`,
-                    payment_gateway: kitovuError ? 'manual' : 'kitovu',
-                    book_id: data.id,
+                    description: `KitovuPay:${reference}`,
+                    payment_gateway: 'kitovu',
+                    book_id: bookId,
                 });
+                if (error) console.error('Error saving transaction:', error);
 
-                if (kitovuError) {
-                    alert('Mobile money is temporarily unavailable. Your book has been saved. Please contact finance to complete payment.');
-                }
+                setKitovuReference(reference);
+                setKitovuPending(true);
+                setProcessingPayment(false);
+                return;
             }
 
-            setCreatedBookId(data?.id || null);
+            await supabase.from('transactions').insert({
+                user_id: user.id,
+                amount: BOOK_POSTING_FEE,
+                currency: 'RWF',
+                type: 'book_purchase',
+                status: 'pending',
+                description: `Book posting fee for "${formData.title}"`,
+                payment_gateway: 'manual',
+                book_id: bookId,
+            });
+
             setStep('complete');
         } catch (error: any) {
             console.error('Error posting book:', error);
@@ -306,7 +447,7 @@ const PostBook: React.FC = () => {
                             </div>
                         </div>
                         <div className="flex justify-between mt-8">
-                            <button onClick={() => setStep('details')} className="px-6 py-3 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2">
+                            <button onClick={() => setStep('files')} className="px-6 py-3 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">arrow_back</span> Back
                             </button>
                             <button
@@ -359,20 +500,104 @@ const PostBook: React.FC = () => {
                         </div>
 
                         <div className="mb-6">
-                            <label className="block text-sm font-bold text-slate-700 mb-2">
-                                Mobile Money Number <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                                placeholder="e.g. 0788123456"
-                                className="w-full h-12 px-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
-                            />
-                            <p className="text-xs text-slate-500 mt-2">
-                                You will receive an MTN MoMo / Airtel Money payment request on your phone.
-                            </p>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Payment Method</label>
+                            <div className="bg-slate-100 rounded-xl p-1">
+                                <button
+                                    onClick={() => { setPaymentMethod('pesapal'); setPesapalFailed(false); }}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${paymentMethod === 'pesapal' && !pesapalFailed
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-lg align-middle mr-2">credit_card</span>
+                                    Card Payment (Visa / Mastercard)
+                                </button>
+                                <button
+                                    onClick={() => { setPaymentMethod('kitovu'); setKitovuFailed(false); }}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${paymentMethod === 'kitovu' && !kitovuFailed
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-lg align-middle mr-2">smartphone</span>
+                                    Mobile Money (MTN MoMo / Airtel)
+                                </button>
+                            </div>
                         </div>
+
+                        {paymentMethod === 'pesapal' && !pesapalFailed && (
+                            <div className="p-5 bg-emerald-50 rounded-xl border border-emerald-200 mb-6 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-emerald-600">credit_card</span>
+                                <div>
+                                    <p className="text-sm font-bold text-emerald-800">Secure Card Payment</p>
+                                    <p className="text-[11px] text-emerald-600">Visa / Mastercard via PesaPal. You will be redirected to complete payment.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {paymentMethod === 'kitovu' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    Mobile Money Network <span className="text-red-500">*</span>
+                                </label>
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMobileNetwork('mtn')}
+                                        className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${mobileNetwork === 'mtn'
+                                            ? 'bg-yellow-400 text-slate-900 border-yellow-400'
+                                            : 'bg-white border-slate-300 text-slate-500 hover:border-yellow-400/60'
+                                            }`}
+                                    >
+                                        MTN MoMo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMobileNetwork('airtel')}
+                                        className={`py-2.5 rounded-xl text-xs font-bold border transition-all ${mobileNetwork === 'airtel'
+                                            ? 'bg-red-500 text-white border-red-500'
+                                            : 'bg-white border-slate-300 text-slate-500 hover:border-red-400/60'
+                                            }`}
+                                    >
+                                        Airtel Money
+                                    </button>
+                                </div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">
+                                    Mobile Money Number <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    placeholder="e.g. 0788123456"
+                                    className="w-full h-12 px-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-primary outline-none transition-all text-sm"
+                                />
+                                <p className="text-xs text-slate-500 mt-2">
+                                    Select your network, then enter your number. You will receive a payment request — enter your PIN to confirm.
+                                </p>
+                            </div>
+                        )}
+
+                        {verifying && (
+                            <div className="mb-6 p-5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-3">
+                                <span className="material-symbols-outlined animate-spin text-primary">autorenew</span>
+                                <p className="text-sm font-bold text-slate-700">Verifying your payment with PesaPal...</p>
+                            </div>
+                        )}
+
+                        {kitovuPending && (
+                            <div className="mb-6 p-5 bg-yellow-50 rounded-xl border border-yellow-200">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="material-symbols-outlined animate-pulse text-yellow-600">smartphone</span>
+                                    <p className="text-sm font-bold text-slate-800">Payment request sent — check your phone</p>
+                                </div>
+                                <p className="text-xs text-slate-600 leading-relaxed">
+                                    A payment request for <strong>{BOOK_POSTING_FEE.toLocaleString()} RWF</strong> has been sent to{' '}
+                                    <strong>{phoneNumber}</strong>. Enter your PIN when prompted. Your book will be submitted
+                                    automatically once payment is confirmed.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="flex justify-between">
                             <button onClick={() => setStep('files')} className="px-6 py-3 text-slate-600 font-bold text-sm hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2">
@@ -380,7 +605,7 @@ const PostBook: React.FC = () => {
                             </button>
                             <button
                                 onClick={handlePayment}
-                                disabled={processingPayment || !phoneNumber}
+                                disabled={processingPayment || kitovuPending || (paymentMethod === 'kitovu' && !kitovuFailed && !phoneNumber)}
                                 className="px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                             >
                                 {processingPayment ? (
@@ -388,10 +613,17 @@ const PostBook: React.FC = () => {
                                         <span className="material-symbols-outlined animate-spin text-sm">sync</span>
                                         Processing Payment...
                                     </>
+                                ) : kitovuPending ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-pulse text-sm">smartphone</span>
+                                        Waiting for confirmation...
+                                    </>
                                 ) : (
                                     <>
                                         <span className="material-symbols-outlined text-sm">lock</span>
-                                        Pay {BOOK_POSTING_FEE.toLocaleString()} RWF & Submit
+                                        {paymentMethod === 'pesapal' && !pesapalFailed
+                                            ? `Pay ${BOOK_POSTING_FEE.toLocaleString()} RWF`
+                                            : `Pay ${BOOK_POSTING_FEE.toLocaleString()} RWF & Submit`}
                                     </>
                                 )}
                             </button>
@@ -406,7 +638,8 @@ const PostBook: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-extrabold text-slate-900 mb-2">Book Submitted Successfully!</h2>
                         <p className="text-slate-500 max-w-md mx-auto mb-8">
-                            Your book "{formData.title}" has been submitted and is now pending review. A payment request has been sent to your phone.
+                            Your book "{formData.title}" has been submitted and is now pending review.
+                            {kitovuPaid ? ' Your payment of 25,000 RWF was confirmed.' : ' A payment request has been sent to your phone.'}
                         </p>
 
                         <div className="bg-slate-50 rounded-xl p-4 max-w-sm mx-auto mb-8 text-left space-y-2 border border-slate-200">
@@ -416,7 +649,9 @@ const PostBook: React.FC = () => {
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Payment</span>
-                                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase">Pending</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${kitovuPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {kitovuPaid ? 'Confirmed' : 'Pending'}
+                                </span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Amount</span>

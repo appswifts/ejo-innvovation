@@ -2,11 +2,14 @@ import { supabase } from './supabaseClient';
 
 export interface KitovuCheckoutRequest {
   amount: number;
-  currency: string;
   phoneNumber: string;
   reference: string;
-  email?: string;
+  senderName?: string;
   description?: string;
+  paymentRail?: 'mtn' | 'airtel';
+  userId?: string;
+  refType?: string;
+  refId?: string;
 }
 
 export interface KitovuCheckoutResponse {
@@ -14,6 +17,8 @@ export interface KitovuCheckoutResponse {
   reference?: string;
   kitovuReference?: string;
   message?: string;
+  transactionStatus?: string;
+  fallback?: boolean;
 }
 
 export const createKitovuCheckout = async (
@@ -32,12 +37,12 @@ export const createKitovuCheckout = async (
 
 export const checkKitovuStatus = async (
   merchantReference: string
-): Promise<{ status: string; amount?: number; currency?: string }> => {
+): Promise<{ status: string; amount?: number; currency?: string } | null> => {
   const { data, error } = await supabase
     .from('kitovu_transactions')
     .select('status, amount, currency')
     .eq('merchant_reference', merchantReference)
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw new Error('Failed to check payment status');
