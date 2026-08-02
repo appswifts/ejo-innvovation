@@ -30,6 +30,7 @@ import ReviewerPortal from './pages/Dashboard/ReviewerPortal';
 import FinanceDashboard from './pages/Dashboard/FinanceDashboard';
 import UserManagement from './pages/Dashboard/Admin/UserManagement';
 import JournalManagement from './pages/Dashboard/Admin/JournalManagement';
+import EditorManagement from './pages/Dashboard/Admin/EditorManagement';
 import Roles from './pages/Dashboard/Admin/Roles';
 import BookManagement from './pages/Dashboard/Admin/BookManagement';
 import AdminApplications from './pages/Dashboard/Admin/Applications';
@@ -39,6 +40,7 @@ import PostBook from './pages/Dashboard/PostBook';
 import PartnerManagement from './pages/Dashboard/Admin/PartnerManagement';
 import SiteSettings from './pages/Dashboard/Admin/SiteSettings';
 import PartnersPage from './pages/Public/PartnersPage';
+import EditorsPage from './pages/Public/EditorsPage';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 const App: React.FC = () => {
@@ -73,6 +75,7 @@ const App: React.FC = () => {
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/copyright" element={<Copyright />} />
           <Route path="/partners" element={<PartnersPage />} />
+          <Route path="/editors" element={<EditorsPage />} />
           <Route path="/book-guidelines" element={<BookGuidelines />} />
 
           {/* Dashboard Routes (Protected) */}
@@ -84,6 +87,7 @@ const App: React.FC = () => {
             <Route path="admin/users" element={<UserManagement />} />
             <Route path="admin/roles" element={<Roles />} />
             <Route path="admin/journals" element={<JournalManagement />} />
+            <Route path="admin/editors" element={<EditorManagement />} />
             <Route path="admin/applications" element={<AdminApplications />} /> {/* Admin Review */}
             <Route path="admin/books" element={<BookManagement />} />
             <Route path="admin/partners" element={<PartnerManagement />} />

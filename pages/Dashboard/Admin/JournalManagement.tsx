@@ -4,9 +4,23 @@ import { supabase } from '../../../lib/supabaseClient';
 import { Journal } from '../../../types';
 import Modal from '../../../components/Modal';
 
+interface EditorOption {
+  id: string;
+  full_name: string;
+  email: string;
+  title?: string;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  editor_in_chief: 'Editor-in-Chief',
+  handling_editor: 'Handling Editor',
+  board_member: 'Editorial Board Member',
+};
+
 const JournalManagement: React.FC = () => {
     const [journals, setJournals] = useState<Journal[]>([]);
     const [packages, setPackages] = useState<any[]>([]);
+    const [editors, setEditors] = useState<EditorOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -14,6 +28,8 @@ const JournalManagement: React.FC = () => {
     const [coverPreview, setCoverPreview] = useState<string | null>(null);
 
     const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null);
+    const [selectedEditorIds, setSelectedEditorIds] = useState<Set<string>>(new Set());
+    const [editorRoles, setEditorRoles] = useState<Record<string, string>>({});
 
     // Form Stats
     const [formData, setFormData] = useState({
@@ -34,7 +50,13 @@ const JournalManagement: React.FC = () => {
     useEffect(() => {
         fetchJournals();
         fetchPackages();
+        fetchEditors();
     }, []);
+
+    const fetchEditors = async () => {
+        const { data } = await supabase.from('editors').select('id, full_name, email, title').eq('is_active', true).order('full_name');
+        if (data) setEditors(data as EditorOption[]);
+    };
 
     const fetchPackages = async () => {
         const { data } = await supabase
@@ -98,7 +120,7 @@ const JournalManagement: React.FC = () => {
         }
     };
 
-    const handleEdit = (journal: Journal) => {
+    const handleEdit = async (journal: Journal) => {
         setSelectedJournal(journal);
         setCoverPreview(journal.cover_image_url || null);
         setFormData({
@@ -115,6 +137,21 @@ const JournalManagement: React.FC = () => {
             subscription_package_id: journal.subscription_package_id || '',
             guidelines: journal.guidelines || '',
         });
+
+        // load currently assigned editors for this journal
+        const { data: links } = await supabase
+            .from('journal_editors')
+            .select('editor_id, role')
+            .eq('journal_id', journal.id);
+        const ids = new Set<string>();
+        const roles: Record<string, string> = {};
+        (links || []).forEach((l: any) => {
+            ids.add(l.editor_id);
+            roles[l.editor_id] = l.role;
+        });
+        setSelectedEditorIds(ids);
+        setEditorRoles(roles);
+
         setIsModalOpen(true);
     };
 
@@ -122,6 +159,8 @@ const JournalManagement: React.FC = () => {
         setIsModalOpen(false);
         setSelectedJournal(null);
         setCoverPreview(null);
+        setSelectedEditorIds(new Set());
+        setEditorRoles({});
         setFormData({
             title: '',
             slug: '',
@@ -163,21 +202,34 @@ const JournalManagement: React.FC = () => {
                 subscription_package_id: formData.is_open_access ? null : (formData.subscription_package_id || null),
             };
 
-            let error;
+            let journalId = selectedJournal?.id || '';
             if (selectedJournal) {
                 const { error: updateError } = await supabase
                     .from('journals')
                     .update(payload)
                     .eq('id', selectedJournal.id);
-                error = updateError;
+                if (updateError) throw updateError;
             } else {
-                const { error: insertError } = await supabase
+                const { data: newJournal, error: insertError } = await supabase
                     .from('journals')
-                    .insert(payload);
-                error = insertError;
+                    .insert(payload)
+                    .select('id')
+                    .single();
+                if (insertError) throw insertError;
+                journalId = newJournal.id;
             }
 
-            if (error) throw error;
+            // sync editor assignments for this journal
+            await supabase.from('journal_editors').delete().eq('journal_id', journalId);
+            if (selectedEditorIds.size > 0) {
+                const links = Array.from(selectedEditorIds).map(editor_id => ({
+                    journal_id: journalId,
+                    editor_id,
+                    role: editorRoles[editor_id] || 'handling_editor',
+                }));
+                const { error: linksError } = await supabase.from('journal_editors').insert(links);
+                if (linksError) throw linksError;
+            }
 
             await fetchJournals();
             handleClose();
@@ -199,6 +251,8 @@ const JournalManagement: React.FC = () => {
                 <button
                     onClick={() => {
                         setSelectedJournal(null);
+                        setSelectedEditorIds(new Set());
+                        setEditorRoles({});
                         setFormData({
                             title: '',
                             slug: '',
@@ -342,14 +396,59 @@ const JournalManagement: React.FC = () => {
 
                         <div className="md:col-span-2">
                             <label className="block text-sm font-bold text-slate-700 mb-1">Editorial Team</label>
-                            <input
-                                name="editor_in_chief_name"
-                                type="text"
-                                value={formData.editor_in_chief_name}
-                                onChange={handleChange}
-                                className="w-full h-10 px-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                placeholder="Name of the Editorial Team"
-                            />
+                            <p className="text-xs text-slate-400 mb-2">Select editors to assign to this journal.</p>
+                            {editors.length === 0 ? (
+                                <p className="text-xs text-amber-600 italic">No editors available. Add editors first in the Editors page.</p>
+                            ) : (
+                                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-52 overflow-y-auto custom-scrollbar">
+                                    {editors.map(ed => {
+                                        const isSelected = selectedEditorIds.has(ed.id);
+                                        return (
+                                            <label
+                                                key={ed.id}
+                                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 cursor-pointer transition-colors"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => {
+                                                        setSelectedEditorIds(prev => {
+                                                            const next = new Set(prev);
+                                                            if (next.has(ed.id)) {
+                                                                next.delete(ed.id);
+                                                            } else {
+                                                                next.add(ed.id);
+                                                                setEditorRoles(r => ({ ...r, [ed.id]: r[ed.id] || 'handling_editor' }));
+                                                            }
+                                                            return next;
+                                                        });
+                                                    }}
+                                                    className="accent-primary"
+                                                />
+                                                <span className="text-sm font-medium text-slate-800 flex-1 truncate">
+                                                    {ed.full_name}
+                                                    <span className="text-xs text-slate-400 ml-1.5 truncate">{ed.email}</span>
+                                                </span>
+                                                {isSelected && (
+                                                    <select
+                                                        value={editorRoles[ed.id] || 'handling_editor'}
+                                                        onChange={(e) => setEditorRoles(r => ({ ...r, [ed.id]: e.target.value }))}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="text-xs font-bold text-slate-600 bg-slate-100 border-0 rounded-md py-1 px-2 focus:ring-2 focus:ring-primary/20"
+                                                    >
+                                                        {Object.entries(ROLE_LABELS).map(([k, v]) => (
+                                                            <option key={k} value={k}>{v}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {selectedEditorIds.size > 0 && (
+                                <p className="text-xs text-slate-400 mt-1.5">{selectedEditorIds.size} editor{selectedEditorIds.size !== 1 ? 's' : ''} selected</p>
+                            )}
                         </div>
 
                         <div className="md:col-span-2">

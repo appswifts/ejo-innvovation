@@ -29,6 +29,7 @@ const JournalDetail: React.FC = () => {
   const [journal, setJournal] = useState<Journal | null>(null);
   const [subscriptionPackage, setSubscriptionPackage] = useState<any | null>(null);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [journalEditors, setJournalEditors] = useState<{ role: string; editor: any }[]>([]);
   const [purchasedArticles, setPurchasedArticles] = useState<Set<string>>(new Set());
   const [hasJournalAccess, setHasJournalAccess] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,17 @@ const JournalDetail: React.FC = () => {
 
         setArticles(visibleArticles);
 
-        // 3. Check Access (Transactions) if user is logged in
+        // 3. Fetch Editorial Team (editors linked to this journal)
+        const { data: editorsData } = await supabase
+          .from('journal_editors')
+          .select('role, editor:editors(*)')
+          .eq('journal_id', journalId)
+          .eq('is_active', true);
+        setJournalEditors(
+          (editorsData || []).filter((je: any) => je.editor && je.editor.is_active)
+        );
+
+        // 4. Check Access (Transactions) if user is logged in
         if (user && !journalData.is_open_access) {
           // Check for article purchases
           const { data: articleTransactions } = await supabase
@@ -401,18 +412,32 @@ const JournalDetail: React.FC = () => {
 
               <div className="bg-primary/5 rounded-2xl p-8 border border-primary/20">
                 <h3 className="text-xl font-bold font-serif mb-6 text-slate-900">Editorial Team</h3>
-                <div className="flex gap-4 items-center mb-4">
-                  {/* <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-md">
-                                        <img alt={journal.editor_in_chief_name || 'Editor'} className="w-full h-full object-cover" src="https://via.placeholder.com/150" />
-                                    </div> */}
-                  <div>
-                    <h4 className="font-bold text-slate-900">{journal.editor_in_chief_name || 'Not Assigned'}</h4>
-                    <p className="text-primary font-semibold text-xs">Editorial Team</p>
+                {journalEditors.length > 0 ? (
+                  <div className="space-y-4">
+                    {journalEditors.map(({ role, editor }) => (
+                      <div key={editor.id} className="flex gap-4 items-center">
+                        <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                          {editor.avatar_url ? (
+                            <img alt={editor.full_name} src={editor.avatar_url} className="w-full h-full object-cover" />
+                          ) : (
+                            (editor.full_name || 'E').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-slate-900 truncate">{editor.full_name}</h4>
+                          <p className="text-primary font-semibold text-xs">
+                            {role === 'editor_in_chief' ? 'Editor-in-Chief' : role === 'board_member' ? 'Editorial Board Member' : 'Handling Editor'}
+                          </p>
+                          {editor.title && (
+                            <p className="text-slate-500 text-xs mt-0.5 truncate">{editor.title}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  Leading the editorial board to ensure the highest standards of peer review and publication ethics.
-                </p>
+                ) : (
+                    <p className="text-slate-400 text-sm italic text-center py-6">No editorial team has been assigned to this journal yet.</p>
+                )}
               </div>
             </div>
           </aside>

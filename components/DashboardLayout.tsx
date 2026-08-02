@@ -54,6 +54,7 @@ const DashboardLayout: React.FC = () => {
             { label: 'Users', icon: 'group', path: '/dashboard/admin/users', roles: ['super_admin'] },
             { label: 'Roles & Perms', icon: 'admin_panel_settings', path: '/dashboard/admin/roles', roles: ['super_admin'] },
             { label: 'Journals', icon: 'menu_book', path: '/dashboard/admin/journals', roles: ['editor', 'super_admin'] },
+            { label: 'Editors', icon: 'edit_square', path: '/dashboard/admin/editors', roles: ['super_admin'] },
             { label: 'Partners', icon: 'handshake', path: '/dashboard/admin/partners', roles: ['super_admin'] },
             { label: 'Settings', icon: 'settings', path: '/dashboard/admin/settings', roles: ['super_admin'] },
         ];

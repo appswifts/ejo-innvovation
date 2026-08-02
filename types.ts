@@ -75,6 +75,26 @@ export interface UserProfile {
   permissions?: string[]; // Computed list of permission slugs for easy checking
 }
 
+export interface Editor {
+  id: string;
+  user_id: string;
+  full_name: string;
+  email: string;
+  title?: string;
+  bio?: string;
+  avatar_url?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface JournalEditor {
+  id: string;
+  journal_id: string;
+  editor_id: string;
+  role: string;
+  is_active: boolean;
+}
+
 export type ManuscriptStatus = 'draft' | 'submitted' | 'under_review' | 'revision_required' | 'accepted' | 'rejected' | 'published';
 
 export interface Manuscript {
