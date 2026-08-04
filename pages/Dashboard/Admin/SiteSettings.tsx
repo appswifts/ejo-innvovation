@@ -10,10 +10,10 @@ interface Setting {
 }
 
 const CATEGORY_META: Record<string, { title: string; icon: string; description: string }> = {
-    payment: {
-        title: 'Payment & Bank Details',
-        icon: 'account_balance',
-        description: 'Bank transfer details shown to users on the checkout page after placing a manual order.'
+    homepage_promo: {
+        title: 'Homepage Promo / Book Ad',
+        icon: 'campaign',
+        description: 'Featured book or promotion displayed in the dark hero section on the homepage. Clear the title field to revert to the default Foundation section.'
     },
 };
 
@@ -24,6 +24,7 @@ const SiteSettings: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const [imageUploading, setImageUploading] = useState(false);
 
     const isSuperAdmin = profile?.role?.slug === 'super_admin';
 
@@ -52,6 +53,26 @@ const SiteSettings: React.FC = () => {
     const handleChange = (key: string, value: string) => {
         setEditedValues(prev => ({ ...prev, [key]: value }));
         setSaveSuccess(false);
+    };
+
+    const handleImageUpload = async (file: File) => {
+        if (!file.type.startsWith('image/')) { alert('Please upload an image file.'); return; }
+        if (file.size > 5 * 1024 * 1024) { alert('Image must be less than 5 MB.'); return; }
+        setImageUploading(true);
+        try {
+            const ext = file.name.split('.').pop();
+            const filePath = `promo-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+            const { error: uploadError } = await supabase.storage
+                .from('journal_covers')
+                .upload(filePath, file, { cacheControl: '3600', upsert: false });
+            if (uploadError) throw uploadError;
+            const { data: urlData } = supabase.storage.from('journal_covers').getPublicUrl(filePath);
+            handleChange('homepage_promo_image_url', urlData.publicUrl);
+        } catch (err: any) {
+            alert('Upload failed: ' + err.message);
+        } finally {
+            setImageUploading(false);
+        }
     };
 
     const hasChanges = settings.some(s => editedValues[s.key] !== s.value);
@@ -158,7 +179,8 @@ const SiteSettings: React.FC = () => {
                                 <div className="divide-y divide-slate-50">
                                     {items.map(setting => {
                                         const isChanged = editedValues[setting.key] !== setting.value;
-                                        const isMultiline = setting.key === 'payment_note';
+                                        const isMultiline = setting.key === 'homepage_promo_description';
+                                        const isImageUrl = setting.key.endsWith('_image_url');
                                         return (
                                             <div key={setting.key} className="px-8 py-5 hover:bg-slate-50/50 transition-colors">
                                                 <div className="flex items-start justify-between gap-8">
@@ -180,6 +202,46 @@ const SiteSettings: React.FC = () => {
                                                                 className={`w-full p-3 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none transition-colors ${isChanged ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'
                                                                     }`}
                                                             />
+                                                        ) : isImageUrl ? (
+                                                            <div className="space-y-2">
+                                                                <div className="flex gap-2">
+                                                                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition-colors ${imageUploading ? 'bg-slate-100 border-slate-200 text-slate-400' : 'bg-primary text-white border-primary hover:bg-primary-dark'}`}>
+                                                                        {imageUploading ? (
+                                                                            <>
+                                                                                <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></span>
+                                                                                Uploading...
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-lg">cloud_upload</span>
+                                                                                Upload
+                                                                            </>
+                                                                        )}
+                                                                        <input
+                                                                            type="file"
+                                                                            accept="image/*"
+                                                                            className="hidden"
+                                                                            disabled={imageUploading}
+                                                                            onChange={(e) => {
+                                                                                const file = e.target.files?.[0];
+                                                                                if (file) handleImageUpload(file);
+                                                                            }}
+                                                                        />
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={editedValues[setting.key] || ''}
+                                                                        onChange={(e) => handleChange(setting.key, e.target.value)}
+                                                                        className={`flex-1 h-10 px-4 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${isChanged ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'}`}
+                                                                        placeholder="Paste image URL..."
+                                                                    />
+                                                                </div>
+                                                                {editedValues[setting.key] && (
+                                                                    <div className="rounded-lg overflow-hidden border border-slate-200 w-40 h-24">
+                                                                        <img src={editedValues[setting.key]} alt="Preview" className="w-full h-full object-cover" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         ) : (
                                                             <input
                                                                 type="text"
@@ -188,6 +250,9 @@ const SiteSettings: React.FC = () => {
                                                                 className={`w-full h-10 px-4 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${isChanged ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-white'
                                                                     }`}
                                                             />
+                                                        )}
+                                                        {isImageUrl && editedValues[setting.key] && (
+                                                            false
                                                         )}
                                                     </div>
                                                 </div>

@@ -28,6 +28,46 @@ const BookReader: React.FC = () => {
     const [isEditor, setIsEditor] = useState(false);
     const [numPages, setNumPages] = useState<number>(0);
     const flipBookRef = useRef<any>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [bookWidth, setBookWidth] = useState(700);
+    const [bookHeight, setBookHeight] = useState(980);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const calcSize = () => {
+            const w = window.innerWidth;
+            setIsMobile(w < 768);
+            if (w < 640) {
+                const bw = Math.min(w - 16, 500);
+                setBookWidth(bw);
+                setBookHeight(Math.round(bw * 1.4));
+            } else if (w < 1024) {
+                setBookWidth(550);
+                setBookHeight(770);
+            } else {
+                setBookWidth(700);
+                setBookHeight(980);
+            }
+        };
+        calcSize();
+        window.addEventListener('resize', calcSize);
+
+        const observer = new ResizeObserver((entries) => {
+            const cw = entries[0]?.contentRect.width;
+            if (cw && cw > 100 && window.innerWidth >= 768) {
+                const bw = Math.min(cw - 24, 1100);
+                setBookWidth(bw);
+                setBookHeight(Math.round(bw * 1.4));
+            }
+        });
+        const el = containerRef.current;
+        if (el) observer.observe(el);
+
+        return () => {
+            window.removeEventListener('resize', calcSize);
+            observer.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (id) {
@@ -226,50 +266,50 @@ const BookReader: React.FC = () => {
     return (
         <div className="min-h-screen bg-slate-950 flex flex-col overflow-hidden">
             {/* Reader Controls */}
-            <header className="h-[70px] bg-slate-900/50 backdrop-blur-md border-b border-white/5 px-6 flex items-center justify-between z-50">
-                <div className="flex items-center gap-4">
+            <header className="h-[56px] sm:h-[70px] bg-slate-900/50 backdrop-blur-md border-b border-white/5 px-3 sm:px-6 flex items-center justify-between z-50 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-4">
                     <button
                         onClick={() => navigate('/books')}
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                        className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all shrink-0"
                     >
-                        <span className="material-symbols-outlined">arrow_back</span>
+                        <span className="material-symbols-outlined text-lg sm:text-xl">arrow_back</span>
                     </button>
-                    <div>
-                        <h1 className="text-white font-black text-sm tracking-tight truncate max-w-[300px]">{book.title}</h1>
+                    <div className="min-w-0 hidden sm:block">
+                        <h1 className="text-white font-black text-sm tracking-tight truncate max-w-[200px] sm:max-w-[300px]">{book.title}</h1>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Digital Publication</p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-black/30 p-1.5 rounded-full border border-white/5">
+                <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 bg-black/30 p-1 sm:p-1.5 rounded-full border border-white/5">
                     <button
                         onClick={() => flipBookRef.current?.pageFlip().flipPrev()}
-                        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 text-white transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-white/10 text-white transition-all"
                     >
-                        <span className="material-symbols-outlined">chevron_left</span>
+                        <span className="material-symbols-outlined text-lg">chevron_left</span>
                     </button>
-                    <div className="px-4 text-[11px] font-black text-white tabular-nums border-x border-white/10">
-                        SCANNING PAGES
+                    <div className="px-2 sm:px-4 text-[10px] sm:text-[11px] font-black text-white tabular-nums border-x border-white/10 whitespace-nowrap">
+                        {numPages > 0 ? `${numPages} PAGES` : 'LOADING'}
                     </div>
                     <button
                         onClick={() => flipBookRef.current?.pageFlip().flipNext()}
-                        className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 text-white transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-white/10 text-white transition-all"
                     >
-                        <span className="material-symbols-outlined">chevron_right</span>
+                        <span className="material-symbols-outlined text-lg">chevron_right</span>
                     </button>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 sm:gap-3">
                     {isEditor && (
                         <button
                             onClick={handleDownload}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
+                            className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-300 hover:bg-primary hover:text-white transition-all"
                             title="Download PDF (Admin only)"
                         >
-                            <span className="material-symbols-outlined">download</span>
+                            <span className="material-symbols-outlined text-lg sm:text-xl">download</span>
                         </button>
                     )}
                     <button
-                        className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
+                        className="hidden sm:flex w-10 h-10 items-center justify-center rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors"
                         onClick={() => {
                             if (!document.fullscreenElement) {
                                 document.documentElement.requestFullscreen();
@@ -285,59 +325,90 @@ const BookReader: React.FC = () => {
                 </div>
             </header>
 
-            {/* Flipbook Container */}
-            <main className="flex-1 flex flex-col items-center justify-center p-8 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]">
-                <div className="w-full max-w-[1400px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)]">
+            {/* PDF Viewer — scrollable on mobile, flipbook on desktop */}
+            {isMobile ? (
+                <main className="flex-1 overflow-y-auto bg-slate-900 p-2">
                     <Document
                         file={book.pdf_url}
                         onLoadSuccess={onDocumentLoadSuccess}
                         loading={
-                            <div className="text-center text-slate-500 font-bold">
+                            <div className="flex items-center justify-center py-20 text-slate-500 font-bold">
                                 Loading Document...
                             </div>
                         }
                     >
-                        <HTMLFlipBook
-                            width={700}
-                            height={980}
-                            size="stretch"
-                            minWidth={315}
-                            maxWidth={1400}
-                            minHeight={400}
-                            maxHeight={1960}
-                            maxShadowOpacity={0.5}
-                            showCover={true}
-                            mobileScrollSupport={true}
-                            className="mx-auto"
-                            ref={flipBookRef}
-                            style={{}}
-                            startPage={0}
-                            drawShadow={true}
-                            flippingTime={1000}
-                            usePortrait={false}
-                            startZIndex={0}
-                            autoSize={true}
-                            clickEventForward={true}
-                            useMouseEvents={true}
-                            swipeDistance={30}
-                            showPageCorners={true}
-                            disableFlipByClick={false}
-                            onFlip={() => {
-                                // Sound removed for better UX
-                            }}
-                        >
+                        <div className="flex flex-col items-center gap-1">
                             {Array.from(new Array(numPages), (el, index) => (
-                                <div key={`page_${index + 1}`} className="bg-white shadow-inner">
+                                <div key={`page_${index + 1}`} className="bg-white shadow-md">
                                     <Page
                                         pageNumber={index + 1}
-                                        width={700}
+                                        width={bookWidth}
                                         renderTextLayer={false}
                                         renderAnnotationLayer={false}
                                     />
                                 </div>
                             ))}
-                        </HTMLFlipBook>
+                        </div>
                     </Document>
+                    <div className="text-center py-6">
+                        <p className="text-[11px] text-slate-500 font-medium">{numPages} pages</p>
+                    </div>
+                </main>
+            ) : (
+            <main className="flex-1 flex flex-col items-center justify-center p-2 sm:p-4 md:p-8 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] overflow-hidden">
+                <div
+                    ref={containerRef}
+                    className="relative w-full max-w-[1100px]"
+                    style={{ aspectRatio: bookWidth > 0 ? `${bookWidth / bookHeight}` : '0.714' }}
+                >
+                    <div className="absolute inset-0">
+                        <Document
+                            file={book.pdf_url}
+                            onLoadSuccess={onDocumentLoadSuccess}
+                            loading={
+                                <div className="flex items-center justify-center h-full text-slate-500 font-bold">
+                                    Loading Document...
+                                </div>
+                            }
+                        >
+                            <HTMLFlipBook
+                                width={bookWidth}
+                                height={bookHeight}
+                                size="stretch"
+                                minWidth={100}
+                                maxWidth={bookWidth}
+                                minHeight={100}
+                                maxHeight={bookHeight}
+                                maxShadowOpacity={0.5}
+                                showCover={true}
+                                mobileScrollSupport={true}
+                                className="mx-auto"
+                                ref={flipBookRef}
+                                startPage={0}
+                                drawShadow={true}
+                                flippingTime={1000}
+                                usePortrait={false}
+                                startZIndex={0}
+                                autoSize={true}
+                                clickEventForward={true}
+                                useMouseEvents={true}
+                                swipeDistance={30}
+                                showPageCorners={true}
+                                disableFlipByClick={false}
+                            >
+                                {Array.from(new Array(numPages), (el, index) => (
+                                    <div key={`page_${index + 1}`} className="bg-white shadow-inner">
+                                        <Page
+                                            pageNumber={index + 1}
+                                            width={bookWidth}
+                                            renderTextLayer={false}
+                                            renderAnnotationLayer={false}
+                                        />
+                                    </div>
+                                ))}
+                            </HTMLFlipBook>
+                        </Document>
+                    </div>
                 </div>
 
                 {/* Navigation Info */}
@@ -348,6 +419,7 @@ const BookReader: React.FC = () => {
                     <p className="text-[11px] text-slate-600 font-medium">Use arrow keys or click page corners to flip</p>
                 </div>
             </main>
+            )}
         </div>
     );
 };

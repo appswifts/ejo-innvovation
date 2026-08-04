@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
     const { amount, phoneNumber, reference, senderName, description, paymentRail, userId, refType, refId } = body;
 
     const apiKey = Deno.env.get('KITOVU_API_KEY') || '';
-    const apiSecret = Deno.env.get('KITOVU_API_SECRET') || Deno.env.get('KITOVU_CLIENT_SECRET') || '';
+    const apiSecret = Deno.env.get('KITOVU_CLIENT_SECRET') || Deno.env.get('KITOVU_API_SECRET') || '';
     const baseUrl = (Deno.env.get('KITOVU_API_URL') || 'https://gateway.uat.kitovupay.com').replace(/\/$/, '');
     const webhookBase = Deno.env.get('SUPABASE_URL')?.replace(/\/$/, '') || '';
 
@@ -56,13 +56,15 @@ Deno.serve(async (req: Request) => {
     const callbackUrl = `${webhookBase}/functions/v1/kitovu-webhook`;
     const externalId = crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000;
 
+    const sanitizedDescription = (description || 'Payment').replace(/[^\w\s-]/g, '').trim() || 'Payment';
+
     const requestBody = {
       amount,
       payment_rail: paymentRailToUse,
       sender_account_issuer: paymentRailToUse,
       sender_account_name: senderName || 'Customer',
       sender_account_number: formattedPhone,
-      description: description || 'Payment',
+      description: sanitizedDescription,
       callbackUrl,
       externalId: externalId.toString(),
     };

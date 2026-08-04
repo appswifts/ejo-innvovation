@@ -431,12 +431,15 @@ const JournalDetail: React.FC = () => {
                           {editor.title && (
                             <p className="text-slate-500 text-xs mt-0.5 truncate">{editor.title}</p>
                           )}
+                          {editor.bio && (
+                            <p className="text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed">{editor.bio}</p>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                    <p className="text-slate-400 text-sm italic text-center py-6">No editorial team has been assigned to this journal yet.</p>
+                    <p className="text-slate-600 text-sm italic text-center py-6">No editorial team has been assigned to this journal yet.</p>
                 )}
               </div>
             </div>
