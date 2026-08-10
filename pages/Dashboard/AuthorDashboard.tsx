@@ -149,6 +149,17 @@ const AuthorDashboard: React.FC = () => {
     navigate(`/checkout?type=manuscript&id=${selectedManuscript.id}&package_id=${pkgId}`);
   };
 
+  const handleDelete = async (manuscriptId: string, title: string) => {
+    if (!window.confirm(`Delete "${title}"? This action cannot be undone.`)) return;
+    try {
+      const { error } = await supabase.from('manuscripts').delete().eq('id', manuscriptId);
+      if (error) throw error;
+      fetchManuscripts();
+    } catch (error: any) {
+      alert('Failed to delete: ' + error.message);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published': return 'bg-emerald-100 text-emerald-700';
@@ -278,14 +289,20 @@ const AuthorDashboard: React.FC = () => {
                             <span className="material-symbols-outlined text-[14px]">upload</span> Update
                           </button>
                         )}
-                        {m.status === 'accepted' && m.payment_status !== 'paid' && (
+                          {m.status === 'accepted' && m.payment_status !== 'paid' && (
+                            <button
+                              onClick={() => openPaymentModal(m)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 transition-all"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">payments</span> Pay Fee
+                            </button>
+                          )}
                           <button
-                            onClick={() => openPaymentModal(m)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 transition-all"
+                            onClick={() => handleDelete(m.id, m.title)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-lg text-xs font-semibold transition-all"
                           >
-                            <span className="material-symbols-outlined text-[14px]">payments</span> Pay Fee
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
                           </button>
-                        )}
                       </td>
                     </tr>
                   ))
